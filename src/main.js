@@ -10,6 +10,8 @@ const loopStatusLabel = document.querySelector('#loopStatus');
 const START_Y = -2.7;
 const END_Y = 8.2;
 const LAUNCH_TIME_MS = 7600;
+const STEERING_LIMIT_X = 4.6;
+const STEERING_LIMIT_Z = 1.45;
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x06101f);
@@ -52,6 +54,15 @@ scene.add(starField);
 const trail = createTrailSystem();
 scene.add(trail.points);
 
+const pointerRaycaster = new THREE.Raycaster();
+const steeringPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
+const pointer = {
+  normalized: new THREE.Vector2(0, 0),
+  world: new THREE.Vector3(0, START_Y, 0),
+  hasInput: false
+};
+const steeringTarget = new THREE.Vector3(0, START_Y, 0);
+
 let launchStart = null;
 let isLaunching = false;
 let completedLaunch = false;
@@ -72,6 +83,7 @@ launchButton.addEventListener('click', () => {
 
 resetButton.addEventListener('click', resetRocket);
 window.addEventListener('resize', resizeRenderer);
+window.addEventListener('pointermove', updatePointerTarget);
 
 resetRocket();
 requestAnimationFrame(animate);
@@ -86,13 +98,12 @@ function animate(now) {
   const throttle = isLaunching ? throttleCurve(progress) : 0;
 
   if (isLaunching) {
-    rocket.position.y = THREE.MathUtils.lerp(START_Y, END_Y, eased);
-    rocket.rotation.z = Math.sin(now * 0.004) * 0.025 * (1 - progress);
-    rocket.rotation.x = Math.sin(now * 0.0025) * 0.012 * (1 - progress);
+    const baseY = THREE.MathUtils.lerp(START_Y, END_Y, eased);
+    updateRocketFlight(dt, now, baseY, progress);
 
     const altitude = Math.round(eased * 112000);
     const throttleText = progress < 0.14 ? 'Ignition' : progress < 0.72 ? 'Full burn' : 'Coasting';
-    updateHud(altitude, throttleText, 'Running');
+    updateHud(altitude, throttleText, 'Mouse guided');
 
     if (progress >= 1) {
       isLaunching = false;
@@ -339,6 +350,60 @@ function createTrailSystem() {
   };
 }
 
+function updatePointerTarget(event) {
+  pointer.normalized.x = (event.clientX / window.innerWidth) * 2 - 1;
+  pointer.normalized.y = -(event.clientY / window.innerHeight) * 2 + 1;
+  pointer.hasInput = true;
+}
+
+function updateRocketFlight(dt, now, baseY, progress) {
+  const target = getSteeringTarget(baseY, progress);
+  const previousX = rocket.position.x;
+  const previousY = rocket.position.y;
+  const previousZ = rocket.position.z;
+  const followSpeed = pointer.hasInput ? 7.4 : 4.8;
+  const followAlpha = 1 - Math.exp(-followSpeed * dt);
+
+  rocket.position.lerp(target, followAlpha);
+
+  const safeDt = Math.max(dt, 0.001);
+  const velocityX = (rocket.position.x - previousX) / safeDt;
+  const velocityY = (rocket.position.y - previousY) / safeDt;
+  const velocityZ = (rocket.position.z - previousZ) / safeDt;
+  const launchWobble = Math.sin(now * 0.004) * 0.018 * (1 - progress);
+  const desiredLeanZ = THREE.MathUtils.clamp(-velocityX * 0.028, -0.42, 0.42) + launchWobble;
+  const desiredLeanX = THREE.MathUtils.clamp(velocityZ * 0.045 - velocityY * 0.002, -0.28, 0.28);
+  const leanAlpha = 1 - Math.exp(-9 * dt);
+
+  rocket.rotation.z = THREE.MathUtils.lerp(rocket.rotation.z, desiredLeanZ, leanAlpha);
+  rocket.rotation.x = THREE.MathUtils.lerp(rocket.rotation.x, desiredLeanX, leanAlpha);
+}
+
+function getSteeringTarget(baseY, progress) {
+  steeringTarget.set(0, baseY, 0);
+
+  if (!pointer.hasInput) {
+    return steeringTarget;
+  }
+
+  pointerRaycaster.setFromCamera(pointer.normalized, camera);
+  pointerRaycaster.ray.intersectPlane(steeringPlane, pointer.world);
+
+  const steeringAuthority = THREE.MathUtils.smoothstep(progress, 0.04, 0.22);
+  const mouseYInfluence = THREE.MathUtils.lerp(0.18, 0.34, steeringAuthority);
+  const desiredX = THREE.MathUtils.clamp(pointer.world.x, -STEERING_LIMIT_X, STEERING_LIMIT_X);
+  const desiredY = THREE.MathUtils.clamp(baseY + (pointer.world.y - baseY) * mouseYInfluence, START_Y, END_Y + 0.9);
+  const desiredZ = THREE.MathUtils.clamp(-pointer.normalized.y * STEERING_LIMIT_Z * 0.7, -STEERING_LIMIT_Z, STEERING_LIMIT_Z);
+
+  steeringTarget.set(
+    THREE.MathUtils.lerp(0, desiredX, steeringAuthority),
+    desiredY,
+    desiredZ * steeringAuthority
+  );
+
+  return steeringTarget;
+}
+
 function animateFlames(now, throttle) {
   const flameGroup = rocket.getObjectByName('flameGroup');
   const visible = throttle > 0.02;
@@ -401,9 +466,11 @@ function throttleCurve(progress) {
 }
 
 function updateCamera() {
+  const desiredX = THREE.MathUtils.clamp(rocket.position.x * 0.32, -1.4, 1.4);
   const desiredY = THREE.MathUtils.clamp(rocket.position.y + 2.35, 2.4, 9.5);
+  camera.position.x = THREE.MathUtils.lerp(camera.position.x, desiredX, 0.035);
   camera.position.y = THREE.MathUtils.lerp(camera.position.y, desiredY, 0.035);
-  camera.lookAt(0, rocket.position.y + 1.65, 0);
+  camera.lookAt(rocket.position.x * 0.36, rocket.position.y + 1.65, 0);
 }
 
 function updateHud(altitude, throttle, loopStatus) {
@@ -416,6 +483,7 @@ function resetRocket() {
   isLaunching = false;
   completedLaunch = false;
   launchStart = null;
+  steeringTarget.set(0, START_Y, 0);
   rocket.position.set(0, START_Y, 0);
   rocket.rotation.set(0, 0, 0);
   flameLight.intensity = 0;
