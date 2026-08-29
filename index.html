@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>QBasic Rocket — Modern 3D Demo</title>
+    <link rel="stylesheet" href="/src/styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <canvas id="scene" aria-label="3D rocket launch scene"></canvas>
+
+      <section class="hud" aria-label="Rocket launch controls and status">
+        <div class="hud-card hero-card">
+          <p class="eyebrow">QBasic memory → modern AI coding demo</p>
+          <h1>Rocket Launch Loop</h1>
+          <p>
+            A tiny 3D tribute to the old-school idea: print a rocket, move it up the screen,
+            repeat. This version uses real-time animation, lights, particles, and flames.
+          </p>
+          <div class="controls">
+            <button id="launchButton" type="button">Launch rocket</button>
+            <button id="resetButton" type="button" class="secondary">Reset</button>
+          </div>
+        </div>
+
+        <div class="hud-card stats-card">
+          <div>
+            <span class="label">Altitude</span>
+            <strong id="altitude">0 ft</strong>
+          </div>
+          <div>
+            <span class="label">Throttle</span>
+            <strong id="throttle">Idle</strong>
+          </div>
+          <div>
+            <span class="label">Loop</span>
+            <strong id="loopStatus">Waiting</strong>
+          </div>
+        </div>
+
+        <pre class="code-card" aria-label="QBasic-style inspiration code"><code>FOR y = 20 TO 1 STEP -1
+  CLS
+  LOCATE y, 18
+  PRINT "   /\\"
+  PRINT "  /  \\"
+  PRINT "  |AI|"
+  PRINT "  |__|"
+  PRINT "  /!!\\"
+  SLEEP 1
+NEXT y</code></pre>
+      </section>
+    </main>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
