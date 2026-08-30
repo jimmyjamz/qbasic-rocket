@@ -121,8 +121,8 @@ function createBanana(now) {
   node.textContent = '🍌';
   node.setAttribute('aria-hidden', 'true');
   node.style.position = 'fixed';
-  node.style.left = '50%';
-  node.style.top = '36vh';
+  node.style.left = '0';
+  node.style.top = '0';
   node.style.fontSize = '1.45rem';
   node.style.pointerEvents = 'none';
   node.style.zIndex = '17';
