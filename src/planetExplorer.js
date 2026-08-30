@@ -30,7 +30,12 @@ const SCENE_SWAP_PROGRESS = 0.5;
 const BLACK_HOLE_DANGER_ZONE = 0.32;
 const BLACK_HOLE_HOLD_MS = 5000;
 const BLACK_HOLE_WARNING_MS = 2600;
-const BLACK_HOLE_SEQUENCE_MS = 2100;
+const BLACK_HOLE_SEQUENCE_MS = 2400;
+const BLACK_HOLE_OFFSET_X = 1.95;
+const BLACK_HOLE_OFFSET_Y = 1.05;
+const BLACK_HOLE_OFFSET_Z = -0.85;
+const BLACK_HOLE_START_SCALE = 1.05;
+const BLACK_HOLE_END_SCALE = 3.15;
 
 const PLANETS = [
   {
@@ -503,15 +508,20 @@ function startBlackHoleSequence(now) {
   astronautVelocityY = 0;
   jetpackActive = false;
   keys.delete('Space');
-  blackHole.position.set(astronaut.position.x, astronaut.position.y + 0.92, astronaut.position.z - 0.36);
-  blackHole.scale.setScalar(0.35);
+  const vortexDirection = astronaut.position.x > 2.65 ? -1 : 1;
+  blackHole.position.set(
+    astronaut.position.x + BLACK_HOLE_OFFSET_X * vortexDirection,
+    astronaut.position.y + BLACK_HOLE_OFFSET_Y,
+    astronaut.position.z + BLACK_HOLE_OFFSET_Z
+  );
+  blackHole.scale.setScalar(BLACK_HOLE_START_SCALE);
   blackHole.visible = true;
   launchButton.disabled = true;
   actionButton.disabled = true;
   nextButton.disabled = true;
   throttleLabel.textContent = 'Vortex';
   loopStatusLabel.textContent = 'Black hole!';
-  helpLabel.textContent = 'Too high for too long! The astronaut is spinning back to the checkpoint.';
+  helpLabel.textContent = 'Too high for too long! A black hole opened nearby and is pulling the astronaut in.';
 }
 
 function updateBlackHoleSequence(dt, now) {
@@ -519,15 +529,18 @@ function updateBlackHoleSequence(dt, now) {
 
   const sequenceProgress = THREE.MathUtils.clamp((now - blackHoleSequenceStart) / BLACK_HOLE_SEQUENCE_MS, 0, 1);
   const eased = easeInOutCubic(sequenceProgress);
-  const pullStrength = 0.05 + eased * 0.2;
+  const pullStrength = 0.035 + eased * 0.18;
+  const spiralWobble = (1 - sequenceProgress) * 0.055;
 
-  blackHolePullTarget.copy(blackHole.position);
+  blackHolePullTarget.set(blackHole.position.x, blackHole.position.y - 0.08, blackHole.position.z);
   astronaut.position.lerp(blackHolePullTarget, pullStrength);
+  astronaut.position.x += Math.sin(now * 0.024) * spiralWobble;
+  astronaut.position.y += Math.cos(now * 0.02) * spiralWobble;
   astronaut.rotation.z += dt * (7 + sequenceProgress * 24);
   astronaut.rotation.y += dt * (5 + sequenceProgress * 16);
   astronaut.rotation.x += dt * (3 + sequenceProgress * 12);
   astronaut.scale.setScalar(THREE.MathUtils.lerp(1, 0.12, eased));
-  loopStatusLabel.textContent = sequenceProgress < 0.7 ? 'Spinning out!' : 'Checkpoint reset';
+  loopStatusLabel.textContent = sequenceProgress < 0.7 ? 'Getting sucked in!' : 'Checkpoint reset';
   throttleLabel.textContent = 'Vortex';
 
   if (sequenceProgress >= 1) {
@@ -542,7 +555,8 @@ function updateBlackHoleVortex(now, dt) {
     ? THREE.MathUtils.clamp((now - blackHoleSequenceStart) / BLACK_HOLE_SEQUENCE_MS, 0, 1)
     : 0;
   const pulse = 1 + Math.sin(now * 0.018) * 0.08;
-  blackHole.scale.setScalar((0.55 + sequenceProgress * 1.15) * pulse);
+  const vortexScale = THREE.MathUtils.lerp(BLACK_HOLE_START_SCALE, BLACK_HOLE_END_SCALE, easeOutCubic(sequenceProgress));
+  blackHole.scale.setScalar(vortexScale * pulse);
   blackHole.rotation.z -= dt * (2.8 + sequenceProgress * 8);
   blackHole.rotation.y += dt * (1.2 + sequenceProgress * 3);
 
@@ -1156,15 +1170,15 @@ function createBlackHoleVortex() {
     blending: THREE.AdditiveBlending
   });
 
-  const core = new THREE.Mesh(new THREE.SphereGeometry(0.28, 28, 18), coreMaterial);
+  const core = new THREE.Mesh(new THREE.SphereGeometry(0.42, 32, 20), coreMaterial);
   group.add(core);
 
-  const glow = new THREE.Mesh(new THREE.RingGeometry(0.32, 0.78, 42), glowMaterial);
+  const glow = new THREE.Mesh(new THREE.RingGeometry(0.55, 1.45, 56), glowMaterial);
   glow.rotation.x = Math.PI / 2.7;
   group.add(glow);
 
   for (let i = 0; i < 3; i += 1) {
-    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.46 + i * 0.18, 0.018, 8, 72), ringMaterial);
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.85 + i * 0.32, 0.025, 10, 88), ringMaterial);
     ring.rotation.x = Math.PI / 2 + i * 0.42;
     ring.rotation.y = i * 0.62;
     group.add(ring);
