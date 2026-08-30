@@ -2,10 +2,10 @@ import { defineConfig } from 'vite';
 
 function selectedDestinationRoutingFix() {
   return {
-    name: 'rkt-31-selected-destination-routing-fix',
+    name: 'rkt-47-selected-destination-routing-fix',
     enforce: 'pre',
     transform(code, id) {
-      const normalizedId = id.replaceAll('\\', '/');
+      const normalizedId = id.replaceAll('\\', '/').split('?')[0].split('#')[0];
       if (!normalizedId.endsWith('/src/planetExplorer.js')) {
         return null;
       }
@@ -81,8 +81,7 @@ function getNextPlanetIndex(fromIndex) {
       );
 
       if (nextCode === code) {
-        this.warn('RKT-31 selected-destination routing fix did not match planetExplorer.js.');
-        return null;
+        this.error('RKT-47 selected-destination routing fix did not match planetExplorer.js. Failing fast so the routing bug is not hidden.');
       }
 
       return {
