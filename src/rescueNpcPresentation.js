@@ -6,6 +6,7 @@ const rescueState = {
   returnProgress: 0,
   located: false,
   rescued: false,
+  boarded: false,
   lastMode: '',
   lastPlanet: '',
   keys: new Set()
@@ -149,6 +150,7 @@ function resetRescueProgress() {
   rescueState.returnProgress = 0;
   rescueState.located = false;
   rescueState.rescued = false;
+  rescueState.boarded = false;
   document.body.dataset.rescueNpcState = 'visible';
   document.body.dataset.rescueNpcProgress = '0';
   document.body.dataset.rescueNpcReturnProgress = '0';
@@ -159,13 +161,25 @@ function hideRescueProgress() {
   rescueState.returnProgress = 0;
   rescueState.located = false;
   rescueState.rescued = false;
+  rescueState.boarded = false;
   document.body.dataset.rescueNpcState = 'hidden';
   document.body.dataset.rescueNpcProgress = '0';
   document.body.dataset.rescueNpcReturnProgress = '0';
 }
 
+function boardRescuedExplorer() {
+  rescueState.progress = 100;
+  rescueState.returnProgress = 100;
+  rescueState.located = true;
+  rescueState.rescued = true;
+  rescueState.boarded = true;
+  document.body.dataset.rescueNpcState = 'boarded';
+  document.body.dataset.rescueNpcProgress = '100';
+  document.body.dataset.rescueNpcReturnProgress = '100';
+}
+
 function updateFindProgress(mode) {
-  if (mode !== 'Astronaut EVA' || rescueState.located || rescueState.rescued) return;
+  if (mode !== 'Astronaut EVA' || rescueState.located || rescueState.rescued || rescueState.boarded) return;
 
   const movingTowardBeacon = rescueState.keys.has('KeyD') || rescueState.keys.has('ArrowRight');
   const movingAwayFromBeacon = rescueState.keys.has('KeyA') || rescueState.keys.has('ArrowLeft');
@@ -188,7 +202,7 @@ function updateFindProgress(mode) {
 }
 
 function updateReturnProgress(mode) {
-  if (mode !== 'Astronaut EVA' || !rescueState.located || rescueState.rescued) return;
+  if (mode !== 'Astronaut EVA' || !rescueState.located || rescueState.rescued || rescueState.boarded) return;
 
   const movingTowardRocket = rescueState.keys.has('KeyA') || rescueState.keys.has('ArrowLeft');
   const movingAwayFromRocket = rescueState.keys.has('KeyD') || rescueState.keys.has('ArrowRight');
@@ -210,9 +224,18 @@ function updateReturnProgress(mode) {
 }
 
 function getDatasetState() {
+  if (rescueState.boarded) return 'boarded';
   if (rescueState.rescued) return 'rescued';
   if (rescueState.located) return 'following';
   return 'visible';
+}
+
+function renderHiddenOverlay() {
+  rescueOverlay.style.opacity = '0';
+  rescueOverlay.style.transform = 'translateY(12px) scale(0.92)';
+  rescueOverlay.setAttribute('aria-hidden', 'true');
+  followIndicator.style.display = 'none';
+  returnMeter.style.display = 'none';
 }
 
 function updateRescueBeacon() {
@@ -222,16 +245,24 @@ function updateRescueBeacon() {
   const shouldShow = isRescueVisibleMode(mode, planet);
   const changedPlanet = rescueState.lastPlanet && planet !== rescueState.lastPlanet;
   const justLanded = rescueState.lastMode === 'In flight' && mode === 'Landed';
+  const justBoardedAfterRescue = rescueState.lastMode === 'Astronaut EVA' && mode === 'Landed' && rescueState.rescued;
 
-  if (shouldShow && (changedPlanet || justLanded || !document.body.dataset.rescueNpcState || document.body.dataset.rescueNpcState === 'hidden')) {
+  if (justBoardedAfterRescue) {
+    boardRescuedExplorer();
+  }
+
+  if (shouldShow && !rescueState.boarded && (changedPlanet || justLanded || !document.body.dataset.rescueNpcState || document.body.dataset.rescueNpcState === 'hidden')) {
     resetRescueProgress();
   }
 
   if (!shouldShow) {
-    rescueOverlay.style.opacity = '0';
-    rescueOverlay.style.transform = 'translateY(12px) scale(0.92)';
-    rescueOverlay.setAttribute('aria-hidden', 'true');
+    renderHiddenOverlay();
     hideRescueProgress();
+  } else if (rescueState.boarded) {
+    renderHiddenOverlay();
+    document.body.dataset.rescueNpcState = 'boarded';
+    document.body.dataset.rescueNpcProgress = '100';
+    document.body.dataset.rescueNpcReturnProgress = '100';
   } else {
     updateFindProgress(mode);
     updateReturnProgress(mode);
@@ -266,7 +297,7 @@ function updateRescueBeacon() {
         ? 'rgba(34, 197, 94, 0.92)'
         : 'rgba(255, 70, 88, 0.9)';
     npcLabel.textContent = rescued
-      ? 'Explorer safe!'
+      ? 'Explorer safe! Board the rocket.'
       : following
         ? 'Following you!'
         : mode === 'Landed'
