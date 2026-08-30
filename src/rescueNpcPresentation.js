@@ -53,6 +53,7 @@ const rescueState = {
   boarded: false,
   lastMode: '',
   lastPlanet: '',
+  lastCheckpointResetToken: '',
   keys: new Set()
 };
 
@@ -224,6 +225,28 @@ function hideRescueProgress() {
   document.body.dataset.rescueNpcReturnProgress = '0';
 }
 
+function applyCheckpointReset(planet = getPlanet()) {
+  rescueState.progress = 0;
+  rescueState.returnProgress = 0;
+  rescueState.located = false;
+  rescueState.rescued = false;
+  rescueState.boarded = false;
+  publishRescueProfile(planet);
+  document.body.dataset.rescueNpcState = 'hidden';
+  document.body.dataset.rescueNpcProgress = '0';
+  document.body.dataset.rescueNpcReturnProgress = '0';
+  renderHiddenOverlay();
+}
+
+function consumeCheckpointReset(planet = getPlanet()) {
+  const token = document.body.dataset.rescueNpcCheckpointReset ?? '';
+  if (!token || token === rescueState.lastCheckpointResetToken) return false;
+
+  rescueState.lastCheckpointResetToken = token;
+  applyCheckpointReset(planet);
+  return true;
+}
+
 function boardRescuedExplorer() {
   rescueState.progress = 100;
   rescueState.returnProgress = 100;
@@ -305,12 +328,13 @@ function updateRescueBeacon() {
   const justLanded = rescueState.lastMode === 'In flight' && mode === 'Landed';
   const justBoardedAfterRescue = rescueState.lastMode === 'Astronaut EVA' && mode === 'Landed' && rescueState.rescued;
   const profile = publishRescueProfile(planet);
+  const checkpointResetConsumed = consumeCheckpointReset(planet);
 
-  if (justBoardedAfterRescue) {
+  if (!checkpointResetConsumed && justBoardedAfterRescue) {
     boardRescuedExplorer();
   }
 
-  if (shouldShow && !rescueState.boarded && (changedPlanet || justLanded || !document.body.dataset.rescueNpcState || document.body.dataset.rescueNpcState === 'hidden')) {
+  if (shouldShow && !rescueState.boarded && (checkpointResetConsumed || changedPlanet || justLanded || !document.body.dataset.rescueNpcState || document.body.dataset.rescueNpcState === 'hidden')) {
     resetRescueProgress();
   }
 
