@@ -3,29 +3,41 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>QBasic Rocket — Modern 3D Demo</title>
+    <title>QBasic Rocket — Planet Explorer</title>
     <link rel="stylesheet" href="/src/styles.css" />
   </head>
   <body>
     <main class="app-shell">
-      <canvas id="scene" aria-label="3D rocket launch scene"></canvas>
+      <canvas id="scene" aria-label="3D rocket launch and planet exploration scene"></canvas>
 
-      <section class="hud" aria-label="Rocket launch controls and status">
+      <section class="hud" aria-label="Rocket exploration controls and status">
         <div class="hud-card hero-card">
           <p class="eyebrow">QBasic memory → modern AI coding demo</p>
-          <h1>Rocket Launch Loop</h1>
+          <h1>Rocket Planet Loop</h1>
           <p>
-            A tiny 3D tribute to the old-school idea: print a rocket, move it up the screen,
-            repeat. This version uses real-time animation, lights, particles, flames, and
-            smooth mouse-guided steering while the rocket is in flight.
+            Launch, guide the rocket with the mouse, land on a planet, step out as an astronaut,
+            walk the terrain, climb back in, and fly to the next world.
           </p>
           <div class="controls">
             <button id="launchButton" type="button">Launch rocket</button>
+            <button id="actionButton" type="button" class="secondary">Exit after landing</button>
+            <button id="nextButton" type="button" class="secondary">Choose next planet</button>
             <button id="resetButton" type="button" class="secondary">Reset</button>
           </div>
+          <p id="helpText" class="help-text">
+            Move the mouse during flight to guide the rocket. After landing, press E to exit.
+          </p>
         </div>
 
         <div class="hud-card stats-card">
+          <div>
+            <span class="label">Planet</span>
+            <strong id="planetName">Launchpad</strong>
+          </div>
+          <div>
+            <span class="label">Mode</span>
+            <strong id="modeName">Rocket</strong>
+          </div>
           <div>
             <span class="label">Altitude</span>
             <strong id="altitude">0 ft</strong>
@@ -40,16 +52,15 @@
           </div>
         </div>
 
-        <pre class="code-card" aria-label="QBasic-style inspiration code"><code>FOR y = 20 TO 1 STEP -1
-  CLS
-  LOCATE y, 18
-  PRINT "   /\\"
-  PRINT "  /  \\"
-  PRINT "  |AI|"
-  PRINT "  |__|"
-  PRINT "  /!!\\"
-  SLEEP 1
-NEXT y</code></pre>
+        <pre class="code-card" aria-label="QBasic-style inspiration code"><code>FOR planet = 1 TO 3
+  LAUNCH_ROCKET
+  LAND_ON planet
+  astronaut = EXIT_ROCKET()
+  WHILE astronaut.exploring
+    WALK_AROUND
+  WEND
+  ENTER_ROCKET
+NEXT planet</code></pre>
       </section>
     </main>
 
