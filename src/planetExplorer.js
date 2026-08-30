@@ -18,6 +18,9 @@ const LAND_Y = -1.25;
 const ASTRONAUT_GROUND_Y = LAND_Y + 0.82;
 const ASTRONAUT_MAX_Y = LAND_Y + 9.2;
 const LAUNCH_TIME_MS = 7200;
+const LAUNCH_COUNTDOWN_ENABLED = false;
+const LAUNCH_COUNTDOWN_MS = 3200;
+const LAUNCH_COUNTDOWN_STEPS = ['3', '2', '1', 'Launch!'];
 const STEERING_LIMIT_X = 4.8;
 const STEERING_LIMIT_Z = 1.45;
 const WALK_LIMIT = 5.6;
@@ -141,6 +144,8 @@ const keys = new Set();
 let currentPlanetIndex = 0;
 let targetPlanetIndex = 0;
 let launchStart = null;
+let countdownStart = null;
+let pendingLaunchTargetIndex = null;
 let flightMode = 'ready';
 let lastTime = performance.now();
 let astronautVelocityX = 0;
@@ -183,7 +188,9 @@ function animate(now) {
   const progress = flightMode === 'launching' ? Math.min(elapsed / LAUNCH_TIME_MS, 1) : 0;
   const throttle = flightMode === 'launching' ? throttleCurve(progress) : 0;
 
-  if (flightMode === 'launching') {
+  if (flightMode === 'countdown') {
+    updateLaunchCountdown(now);
+  } else if (flightMode === 'launching') {
     updateRocketFlight(dt, now, progress);
     swapDestinationSceneAtApex(progress);
 
@@ -224,7 +231,7 @@ function animate(now) {
 }
 
 function launchToSelectedPlanet() {
-  if (flightMode === 'walking') return;
+  if (flightMode === 'walking' || flightMode === 'countdown') return;
 
   if (flightMode === 'landed') {
     targetPlanetIndex = (currentPlanetIndex + 1) % PLANETS.length;
@@ -234,7 +241,57 @@ function launchToSelectedPlanet() {
     targetPlanetIndex = (currentPlanetIndex + 1) % PLANETS.length;
   }
 
+  if (LAUNCH_COUNTDOWN_ENABLED) {
+    startLaunchCountdown();
+    return;
+  }
+
+  beginLaunchFlight();
+}
+
+function startLaunchCountdown() {
   resetBlackHoleState();
+  resetLaunchCountdownState();
+  pendingLaunchTargetIndex = targetPlanetIndex;
+  countdownStart = performance.now();
+  astronaut.visible = false;
+  jetpackActive = false;
+  flightMode = 'countdown';
+  launchButton.disabled = true;
+  actionButton.disabled = true;
+  nextButton.disabled = true;
+  updateHud(hasLeftLaunchpad ? 112000 : 0, 'Counting down', 'T-3');
+  updateUi();
+}
+
+function updateLaunchCountdown(now) {
+  if (countdownStart === null) {
+    beginLaunchFlight();
+    return;
+  }
+
+  const elapsed = now - countdownStart;
+  const stepDuration = LAUNCH_COUNTDOWN_MS / LAUNCH_COUNTDOWN_STEPS.length;
+  const stepIndex = THREE.MathUtils.clamp(Math.floor(elapsed / stepDuration), 0, LAUNCH_COUNTDOWN_STEPS.length - 1);
+  const countdownText = LAUNCH_COUNTDOWN_STEPS[stepIndex];
+  const altitude = hasLeftLaunchpad ? 112000 : 0;
+
+  launchButton.textContent = countdownText === 'Launch!' ? 'Launching...' : `Launching in ${countdownText}`;
+  updateHud(altitude, 'Counting down', countdownText === 'Launch!' ? 'Launch!' : `T-${countdownText}`);
+  helpLabel.textContent = `Launch countdown active: ${countdownText} Keep hands clear of the blast zone.`;
+
+  if (elapsed >= LAUNCH_COUNTDOWN_MS) {
+    beginLaunchFlight();
+  }
+}
+
+function beginLaunchFlight() {
+  if (pendingLaunchTargetIndex !== null) {
+    targetPlanetIndex = pendingLaunchTargetIndex;
+  }
+
+  resetBlackHoleState();
+  resetLaunchCountdownState();
   astronaut.visible = false;
   jetpackActive = false;
   hasSwappedDestinationScene = false;
@@ -249,8 +306,13 @@ function launchToSelectedPlanet() {
   updateUi();
 }
 
+function resetLaunchCountdownState() {
+  countdownStart = null;
+  pendingLaunchTargetIndex = null;
+}
+
 function chooseNextPlanet() {
-  if (flightMode === 'launching' || flightMode === 'walking') return;
+  if (flightMode === 'launching' || flightMode === 'countdown' || flightMode === 'walking') return;
   targetPlanetIndex = (targetPlanetIndex + 1) % PLANETS.length;
   if (targetPlanetIndex === currentPlanetIndex) {
     targetPlanetIndex = (targetPlanetIndex + 1) % PLANETS.length;
@@ -268,6 +330,7 @@ function handleContextAction() {
 
 function exitRocket() {
   resetBlackHoleState();
+  resetLaunchCountdownState();
   flightMode = 'walking';
   astronaut.visible = true;
   astronaut.position.set(rocket.position.x + 1.05, ASTRONAUT_GROUND_Y, 0.18);
@@ -283,6 +346,7 @@ function exitRocket() {
 
 function enterRocket() {
   resetBlackHoleState();
+  resetLaunchCountdownState();
   flightMode = 'landed';
   astronaut.visible = false;
   astronautVelocityX = 0;
@@ -298,6 +362,7 @@ function completeLanding() {
   currentPlanetIndex = targetPlanetIndex;
 
   resetBlackHoleState();
+  resetLaunchCountdownState();
   flightMode = 'landed';
   launchStart = null;
   rocket.position.set(lastLandedX, LAND_Y, 0);
@@ -568,6 +633,7 @@ function updateBlackHoleVortex(now, dt) {
 
 function resetToLastCheckpoint() {
   resetBlackHoleState();
+  resetLaunchCountdownState();
   flightMode = 'landed';
   launchStart = null;
   jetpackActive = false;
@@ -1018,7 +1084,7 @@ function updateLaunchSpectators(now, dt) {
     return;
   }
 
-  const shouldShow = flightMode === 'ready' || flightMode === 'launching';
+  const shouldShow = flightMode === 'ready' || flightMode === 'countdown' || flightMode === 'launching';
   launchSpectators.visible = shouldShow;
   if (!shouldShow) return;
 
@@ -1346,7 +1412,7 @@ function updateUi() {
   const current = PLANETS[currentPlanetIndex];
   const target = PLANETS[targetPlanetIndex];
 
-  planetLabel.textContent = flightMode === 'ready' ? 'Launchpad' : current.name;
+  planetLabel.textContent = flightMode === 'ready' || (flightMode === 'countdown' && !hasLeftLaunchpad) ? 'Launchpad' : current.name;
   modeLabel.textContent = readableMode(flightMode);
 
   if (flightMode === 'ready') {
@@ -1356,6 +1422,13 @@ function updateUi() {
     launchButton.textContent = `Launch to ${target.name}`;
     actionButton.textContent = 'Exit after landing';
     helpLabel.textContent = `Target: ${target.name} — ${target.tagline}. The station crew is watching. Move the mouse during flight to guide the rocket.`;
+  } else if (flightMode === 'countdown') {
+    launchButton.disabled = true;
+    actionButton.disabled = true;
+    nextButton.disabled = true;
+    launchButton.textContent = 'Counting down...';
+    actionButton.textContent = 'Countdown active';
+    helpLabel.textContent = `Launch countdown armed for ${target.name}.`;
   } else if (flightMode === 'launching') {
     actionButton.disabled = true;
     helpLabel.textContent = hasSwappedDestinationScene
@@ -1381,6 +1454,7 @@ function resetExperience() {
   currentPlanetIndex = 0;
   targetPlanetIndex = 0;
   launchStart = null;
+  resetLaunchCountdownState();
   flightMode = 'ready';
   lastLandedX = 0;
   astronautVelocityX = 0;
@@ -1434,6 +1508,7 @@ function resetExperience() {
 function readableMode(mode) {
   return {
     ready: 'Rocket',
+    countdown: 'Countdown',
     launching: 'In flight',
     landed: 'Landed',
     walking: 'Astronaut EVA'
