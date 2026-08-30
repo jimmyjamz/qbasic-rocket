@@ -3,7 +3,9 @@ const planetLabel = document.querySelector('#planetName');
 
 const rescueState = {
   progress: 0,
+  returnProgress: 0,
   located: false,
+  rescued: false,
   lastMode: '',
   lastPlanet: '',
   keys: new Set()
@@ -19,7 +21,7 @@ rescueOverlay.style.zIndex = '10';
 rescueOverlay.style.pointerEvents = 'none';
 rescueOverlay.style.textAlign = 'center';
 rescueOverlay.style.fontFamily = 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
-rescueOverlay.style.transition = 'opacity 220ms ease, transform 260ms ease, filter 220ms ease';
+rescueOverlay.style.transition = 'right 420ms ease, opacity 220ms ease, transform 260ms ease, filter 220ms ease';
 rescueOverlay.style.opacity = '0';
 rescueOverlay.style.transform = 'translateY(12px) scale(0.92)';
 rescueOverlay.style.filter = 'drop-shadow(0 10px 24px rgba(0, 0, 0, 0.45))';
@@ -57,6 +59,22 @@ npcCharacter.style.lineHeight = '1';
 npcCharacter.style.transformOrigin = '50% 80%';
 npcBubble.appendChild(npcCharacter);
 
+const followIndicator = document.createElement('div');
+followIndicator.textContent = '↩';
+followIndicator.style.position = 'absolute';
+followIndicator.style.left = '-0.7rem';
+followIndicator.style.bottom = '-0.35rem';
+followIndicator.style.display = 'none';
+followIndicator.style.width = '1.55rem';
+followIndicator.style.height = '1.55rem';
+followIndicator.style.borderRadius = '999px';
+followIndicator.style.background = 'rgba(34, 197, 94, 0.92)';
+followIndicator.style.color = '#ffffff';
+followIndicator.style.fontSize = '1rem';
+followIndicator.style.fontWeight = '1000';
+followIndicator.style.lineHeight = '1.55rem';
+npcBubble.appendChild(followIndicator);
+
 const signal = document.createElement('div');
 signal.textContent = 'SOS';
 signal.style.position = 'absolute';
@@ -86,6 +104,26 @@ npcLabel.style.textTransform = 'uppercase';
 npcLabel.style.whiteSpace = 'nowrap';
 rescueOverlay.appendChild(npcLabel);
 
+const returnMeter = document.createElement('div');
+returnMeter.style.width = '8rem';
+returnMeter.style.maxWidth = '36vw';
+returnMeter.style.height = '0.46rem';
+returnMeter.style.margin = '0.45rem auto 0';
+returnMeter.style.border = '1px solid rgba(148, 232, 255, 0.32)';
+returnMeter.style.borderRadius = '999px';
+returnMeter.style.background = 'rgba(255, 255, 255, 0.08)';
+returnMeter.style.overflow = 'hidden';
+returnMeter.style.display = 'none';
+rescueOverlay.appendChild(returnMeter);
+
+const returnMeterFill = document.createElement('div');
+returnMeterFill.style.height = '100%';
+returnMeterFill.style.width = '0%';
+returnMeterFill.style.borderRadius = '999px';
+returnMeterFill.style.background = 'linear-gradient(90deg, #68d8ff, #79ffb2)';
+returnMeterFill.style.transition = 'width 120ms linear';
+returnMeter.appendChild(returnMeterFill);
+
 window.addEventListener('keydown', (event) => {
   rescueState.keys.add(event.code);
 });
@@ -108,12 +146,26 @@ function isRescueVisibleMode(mode, planet) {
 
 function resetRescueProgress() {
   rescueState.progress = 0;
+  rescueState.returnProgress = 0;
   rescueState.located = false;
+  rescueState.rescued = false;
   document.body.dataset.rescueNpcState = 'visible';
+  document.body.dataset.rescueNpcProgress = '0';
+  document.body.dataset.rescueNpcReturnProgress = '0';
 }
 
-function updateRescueProgress(mode) {
-  if (mode !== 'Astronaut EVA' || rescueState.located) return;
+function hideRescueProgress() {
+  rescueState.progress = 0;
+  rescueState.returnProgress = 0;
+  rescueState.located = false;
+  rescueState.rescued = false;
+  document.body.dataset.rescueNpcState = 'hidden';
+  document.body.dataset.rescueNpcProgress = '0';
+  document.body.dataset.rescueNpcReturnProgress = '0';
+}
+
+function updateFindProgress(mode) {
+  if (mode !== 'Astronaut EVA' || rescueState.located || rescueState.rescued) return;
 
   const movingTowardBeacon = rescueState.keys.has('KeyD') || rescueState.keys.has('ArrowRight');
   const movingAwayFromBeacon = rescueState.keys.has('KeyA') || rescueState.keys.has('ArrowLeft');
@@ -131,8 +183,36 @@ function updateRescueProgress(mode) {
 
   if (rescueState.progress >= 100) {
     rescueState.located = true;
-    document.body.dataset.rescueNpcState = 'located';
+    rescueState.returnProgress = 0;
   }
+}
+
+function updateReturnProgress(mode) {
+  if (mode !== 'Astronaut EVA' || !rescueState.located || rescueState.rescued) return;
+
+  const movingTowardRocket = rescueState.keys.has('KeyA') || rescueState.keys.has('ArrowLeft');
+  const movingAwayFromRocket = rescueState.keys.has('KeyD') || rescueState.keys.has('ArrowRight');
+  const jetpacking = rescueState.keys.has('Space');
+
+  if (movingTowardRocket) {
+    rescueState.returnProgress += jetpacking ? 1.55 : 1.25;
+  } else if (movingAwayFromRocket) {
+    rescueState.returnProgress -= 0.65;
+  } else {
+    rescueState.returnProgress -= 0.06;
+  }
+
+  rescueState.returnProgress = Math.max(0, Math.min(100, rescueState.returnProgress));
+
+  if (rescueState.returnProgress >= 100) {
+    rescueState.rescued = true;
+  }
+}
+
+function getDatasetState() {
+  if (rescueState.rescued) return 'rescued';
+  if (rescueState.located) return 'following';
+  return 'visible';
 }
 
 function updateRescueBeacon() {
@@ -151,30 +231,52 @@ function updateRescueBeacon() {
     rescueOverlay.style.opacity = '0';
     rescueOverlay.style.transform = 'translateY(12px) scale(0.92)';
     rescueOverlay.setAttribute('aria-hidden', 'true');
-    document.body.dataset.rescueNpcState = 'hidden';
-    rescueState.progress = 0;
-    rescueState.located = false;
+    hideRescueProgress();
   } else {
-    updateRescueProgress(mode);
+    updateFindProgress(mode);
+    updateReturnProgress(mode);
 
-    const found = rescueState.located || document.body.dataset.rescueNpcState === 'located';
+    const datasetState = getDatasetState();
+    const following = datasetState === 'following';
+    const rescued = datasetState === 'rescued';
     const pulse = 1 + Math.sin(now * 0.006) * 0.08;
     const bob = Math.sin(now * 0.004) * 5;
     const approachScale = 0.92 + rescueState.progress / 100 * 0.2;
+    const returnScale = 1.06 + Math.sin(now * 0.008) * 0.035;
     const opacity = mode === 'Landed' ? 0.88 : 1;
+    const preferredRight = following || rescued ? 18 + rescueState.returnProgress * 0.3 : 18;
 
+    rescueOverlay.style.right = `clamp(5.5rem, ${preferredRight}vw, 31rem)`;
     rescueOverlay.style.opacity = `${opacity}`;
-    rescueOverlay.style.transform = `translateY(${bob}px) scale(${found ? 1.14 : approachScale})`;
+    rescueOverlay.style.transform = `translateY(${bob}px) scale(${rescued ? 1.18 : following ? returnScale : approachScale})`;
     rescueOverlay.setAttribute('aria-hidden', 'false');
-    beaconPulse.style.transform = `translate(-50%, -50%) scale(${found ? 1.28 : pulse})`;
-    beaconPulse.style.borderColor = found ? 'rgba(121, 255, 178, 0.72)' : 'rgba(104, 216, 255, 0.55)';
-    beaconPulse.style.opacity = found ? '0.9' : '0.45';
-    npcCharacter.style.transform = `rotate(${Math.sin(now * 0.006) * (found ? 8 : 4)}deg)`;
-    signal.textContent = found ? 'FOUND' : 'SOS';
-    signal.style.background = found ? 'rgba(34, 197, 94, 0.92)' : 'rgba(255, 70, 88, 0.9)';
-    npcLabel.textContent = found ? 'Explorer found!' : mode === 'Landed' ? 'SOS beacon detected' : 'Stranded explorer';
-    document.body.dataset.rescueNpcState = found ? 'located' : 'visible';
+    beaconPulse.style.transform = `translate(-50%, -50%) scale(${rescued ? 1.46 : following ? 1.34 : pulse})`;
+    beaconPulse.style.borderColor = rescued
+      ? 'rgba(255, 241, 166, 0.86)'
+      : following
+        ? 'rgba(121, 255, 178, 0.72)'
+        : 'rgba(104, 216, 255, 0.55)';
+    beaconPulse.style.opacity = rescued ? '1' : following ? '0.9' : '0.45';
+    npcCharacter.style.transform = `rotate(${Math.sin(now * 0.006) * (following || rescued ? 8 : 4)}deg)`;
+    followIndicator.style.display = following || rescued ? 'block' : 'none';
+    signal.textContent = rescued ? 'SAFE' : following ? 'FOUND' : 'SOS';
+    signal.style.background = rescued
+      ? 'rgba(255, 177, 66, 0.94)'
+      : following
+        ? 'rgba(34, 197, 94, 0.92)'
+        : 'rgba(255, 70, 88, 0.9)';
+    npcLabel.textContent = rescued
+      ? 'Explorer safe!'
+      : following
+        ? 'Following you!'
+        : mode === 'Landed'
+          ? 'SOS beacon detected'
+          : 'Stranded explorer';
+    returnMeter.style.display = following || rescued ? 'block' : 'none';
+    returnMeterFill.style.width = rescued ? '100%' : `${Math.round(rescueState.returnProgress)}%`;
+    document.body.dataset.rescueNpcState = datasetState;
     document.body.dataset.rescueNpcProgress = `${Math.round(rescueState.progress)}`;
+    document.body.dataset.rescueNpcReturnProgress = `${Math.round(rescueState.returnProgress)}`;
   }
 
   rescueState.lastMode = mode;
