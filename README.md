@@ -69,12 +69,26 @@ Astronaut mode:
 - Release **Space**: coast and descend back toward the terrain.
 - Return near the rocket, land, and press **E** or use **Enter Rocket** to climb back in.
 
+## Debug configuration
+
+The launch countdown is implemented but skipped by default so repeated testing stays fast.
+
+In `src/planetExplorer.js`, change this constant when you want to test the countdown flow:
+
+```js
+const LAUNCH_COUNTDOWN_ENABLED = false;
+```
+
+Set it to `true` to show the short `3`, `2`, `1`, `Launch!` countdown before rocket flight. Set it back to `false` when debugging movement, planet landing, jetpack, or black-hole behavior.
+
 ## Production build check
 
 ```bash
 npm run build
 npm run preview
 ```
+
+The current proof of concept may produce a Vite chunk-size warning because Three.js and the game code are bundled together. The build can still complete successfully. Bundle optimization/code splitting is tracked as backlog technical debt rather than blocking gameplay work.
 
 ## Demo talking points
 
