@@ -10,6 +10,8 @@ const BANANA_THROW_TIMES_MS = [320, 780, 1240];
 const BANANA_LIFETIME_MS = 1900;
 const ROCKET_WINDOW_START_Y_VH = 48;
 const ROCKET_WINDOW_ASCENT_Y_VH = 42;
+const ROCKET_WINDOW_GUIDE_X_VW = 23;
+const ROCKET_WINDOW_GUIDE_Y_VH = 5.5;
 
 let wasLaunching = false;
 let gagActive = false;
@@ -18,6 +20,15 @@ let nextThrowIndex = 0;
 let animationFrame = null;
 let lastWindowPoint = { x: window.innerWidth / 2, y: window.innerHeight * 0.48 };
 const bananas = [];
+const pointer = {
+  normalizedX: 0,
+  normalizedY: 0,
+  hasInput: false
+};
+const smoothedPointer = {
+  x: 0,
+  y: 0
+};
 
 const monkeyOverlay = document.createElement('div');
 monkeyOverlay.setAttribute('aria-live', 'polite');
@@ -86,11 +97,28 @@ function isLaunchState() {
     || action.startsWith('Flying to');
 }
 
+function updatePointerFromEvent(event) {
+  pointer.normalizedX = (event.clientX / window.innerWidth) * 2 - 1;
+  pointer.normalizedY = -(event.clientY / window.innerHeight) * 2 + 1;
+  pointer.hasInput = true;
+}
+
+function updateSmoothedPointer() {
+  const targetX = pointer.hasInput ? pointer.normalizedX : 0;
+  const targetY = pointer.hasInput ? pointer.normalizedY : 0;
+  smoothedPointer.x += (targetX - smoothedPointer.x) * 0.22;
+  smoothedPointer.y += (targetY - smoothedPointer.y) * 0.18;
+}
+
 function getWindowPoint(elapsed = 0) {
   const progress = Math.min(elapsed / MONKEY_GAG_DURATION_MS, 1);
   const yVh = ROCKET_WINDOW_START_Y_VH + (ROCKET_WINDOW_ASCENT_Y_VH - ROCKET_WINDOW_START_Y_VH) * progress;
-  const x = window.innerWidth / 2 + Math.sin(progress * Math.PI * 1.4) * 10;
-  const y = window.innerHeight * (yVh / 100);
+  const guideAuthority = 0.32 + Math.sin(progress * Math.PI) * 0.68;
+  const x = window.innerWidth / 2
+    + Math.sin(progress * Math.PI * 1.4) * 10
+    + smoothedPointer.x * window.innerWidth * (ROCKET_WINDOW_GUIDE_X_VW / 100) * guideAuthority;
+  const y = window.innerHeight * (yVh / 100)
+    - smoothedPointer.y * window.innerHeight * (ROCKET_WINDOW_GUIDE_Y_VH / 100) * guideAuthority;
   return { x, y };
 }
 
@@ -105,6 +133,8 @@ function startMonkeyGag(now) {
   gagActive = true;
   gagStartedAt = now;
   nextThrowIndex = 0;
+  smoothedPointer.x = pointer.hasInput ? pointer.normalizedX : 0;
+  smoothedPointer.y = pointer.hasInput ? pointer.normalizedY : 0;
   lastWindowPoint = getWindowPoint(0);
   setOverlayVisible(true);
   monkeyLabel.textContent = MONKEY_THROW_TARGET === 'aliens' ? 'Alien snack attack!' : 'Monkey business!';
@@ -136,8 +166,8 @@ function createBanana(now) {
     start: now,
     startX: lastWindowPoint.x + direction * 14,
     startY: lastWindowPoint.y + 4,
-    velocityX: direction * (150 + nextThrowIndex * 18),
-    velocityY: -110 - nextThrowIndex * 12,
+    velocityX: direction * (150 + nextThrowIndex * 18) + smoothedPointer.x * 92,
+    velocityY: -110 - nextThrowIndex * 12 - Math.max(0, smoothedPointer.y) * 42,
     gravity: 410,
     spin: direction * (290 + nextThrowIndex * 35)
   });
@@ -176,6 +206,8 @@ function updateMonkeyGag(now) {
     return;
   }
 
+  updateSmoothedPointer();
+
   const launching = isLaunchState();
   if (launching && !wasLaunching) {
     startMonkeyGag(now);
@@ -192,7 +224,7 @@ function updateMonkeyGag(now) {
     monkeyOverlay.style.left = `${point.x}px`;
     monkeyOverlay.style.top = `${point.y}px`;
     monkeyOverlay.style.transform = `translate(-50%, -50%) translateY(${bob}px) scale(0.72)`;
-    monkey.style.transform = `rotate(${wave}deg)`;
+    monkey.style.transform = `rotate(${wave + smoothedPointer.x * 6}deg)`;
     bananaHand.style.opacity = elapsed < 1500 ? '1' : '0';
     bananaHand.style.transform = `rotate(${-32 + Math.sin(now * 0.044) * 34}deg) scale(${elapsed < 1500 ? 1 : 0.78})`;
 
@@ -216,5 +248,6 @@ function resetMonkeyGag() {
   wasLaunching = false;
 }
 
+window.addEventListener('pointermove', updatePointerFromEvent);
 resetButton?.addEventListener('click', resetMonkeyGag);
 animationFrame = requestAnimationFrame(updateMonkeyGag);
