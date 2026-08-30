@@ -101,7 +101,8 @@ function readUiState() {
     contextAction: actionButton?.textContent?.trim() ?? '',
     help: helpLabel?.textContent?.trim() ?? '',
     rescueState: document.body.dataset.rescueNpcState ?? 'hidden',
-    rescueProgress: Number(document.body.dataset.rescueNpcProgress ?? 0)
+    rescueProgress: Number(document.body.dataset.rescueNpcProgress ?? 0),
+    rescueReturnProgress: Number(document.body.dataset.rescueNpcReturnProgress ?? 0)
   };
 }
 
@@ -134,12 +135,21 @@ function getMissionCopy(state) {
   }
 
   if (state.mode === 'Landed') {
-    if (state.rescueState === 'located') {
+    if (state.rescueState === 'rescued') {
       return {
-        title: 'Explorer located',
-        objective: 'The stranded explorer is marked. Exit the rocket or prepare to return once rescue mechanics are added.',
-        badge: 'Found',
-        step: 2
+        title: 'Rescue complete',
+        objective: 'The explorer is safe. Board the rocket and continue the planet loop when ready.',
+        badge: 'Complete',
+        step: 3
+      };
+    }
+
+    if (state.rescueState === 'following') {
+      return {
+        title: 'Explorer is with you',
+        objective: 'Return the explorer to the rocket. Full boarding animation comes later.',
+        badge: 'Escort',
+        step: 3
       };
     }
 
@@ -179,11 +189,26 @@ function getMissionCopy(state) {
       };
     }
 
-    if (state.rescueState === 'located') {
+    if (state.rescueState === 'rescued') {
       return {
-        title: 'Stranded explorer found',
-        objective: 'Nice rescue scout! Return to the rocket. Follow/carry rescue mechanics come in a later slice.',
-        badge: 'Found',
+        title: 'Rescue complete',
+        objective: 'Great job. The explorer is safe. Return to the rocket and continue the loop.',
+        badge: 'Complete',
+        step: 3
+      };
+    }
+
+    if (state.rescueState === 'following') {
+      const returnHint = state.rescueReturnProgress > 75
+        ? 'Almost back — keep moving left toward the rocket.'
+        : state.rescueReturnProgress > 35
+          ? 'The explorer is following. Keep guiding them back to the ship.'
+          : 'Explorer found! Head left and escort them back to the rocket.';
+
+      return {
+        title: 'Return to rocket with explorer',
+        objective: returnHint,
+        badge: 'Escort',
         step: 3
       };
     }
@@ -258,7 +283,7 @@ function observe(label) {
 const bodyObserver = new MutationObserver(renderMissionTracker);
 bodyObserver.observe(document.body, {
   attributes: true,
-  attributeFilter: ['data-rescue-npc-state', 'data-rescue-npc-progress']
+  attributeFilter: ['data-rescue-npc-state', 'data-rescue-npc-progress', 'data-rescue-npc-return-progress']
 });
 
 renderMissionTracker();
