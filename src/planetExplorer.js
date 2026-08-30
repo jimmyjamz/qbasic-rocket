@@ -26,7 +26,6 @@ const GRAVITY = -7.2;
 const JETPACK_THRUST = 12.4;
 const MAX_FALL_SPEED = -5.4;
 const MAX_RISE_SPEED = 4.2;
-const SPECTATOR_AIRBORNE_PROGRESS = 0.17;
 const SCENE_SWAP_PROGRESS = 0.5;
 
 const PLANETS = [
@@ -189,7 +188,7 @@ function animate(now) {
   animateJetpackFlames(now, jetpackActive);
   updateTrail(dt, throttle);
   updateJetpackExhaust(dt, now, jetpackActive);
-  updateLaunchSpectators(now, dt, progress);
+  updateLaunchSpectators(now, dt);
   updateCamera(dt);
   updateDestinationOrbs(now, dt);
   updatePlanetSurface(now, dt);
@@ -855,14 +854,8 @@ function createSpectator(accent, index) {
   return group;
 }
 
-function updateLaunchSpectators(now, dt, launchProgress) {
+function updateLaunchSpectators(now, dt) {
   if (hasLeftLaunchpad) {
-    launchSpectators.visible = false;
-    return;
-  }
-
-  if (flightMode === 'launching' && launchProgress >= SPECTATOR_AIRBORNE_PROGRESS) {
-    hasLeftLaunchpad = true;
     launchSpectators.visible = false;
     return;
   }
@@ -1169,7 +1162,7 @@ function updateUi() {
       ? `Destination approach: ${target.name} is loaded for landing.`
       : hasLeftLaunchpad
         ? 'Mouse guides the rocket through space. The destination scene will appear near the flight apex.'
-        : 'The launch crew waves during ignition. They clear out once the rocket is airborne.';
+        : 'The launch crew waves through takeoff and clears out when the scene cuts to the destination.';
   } else if (flightMode === 'landed') {
     launchButton.disabled = false;
     actionButton.disabled = false;
