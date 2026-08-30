@@ -8,12 +8,15 @@ const MONKEY_THROW_TARGET = 'planet'; // Future option: 'aliens'
 const MONKEY_GAG_DURATION_MS = 2650;
 const BANANA_THROW_TIMES_MS = [320, 780, 1240];
 const BANANA_LIFETIME_MS = 1900;
+const ROCKET_WINDOW_START_Y_VH = 48;
+const ROCKET_WINDOW_ASCENT_Y_VH = 42;
 
 let wasLaunching = false;
 let gagActive = false;
 let gagStartedAt = 0;
 let nextThrowIndex = 0;
 let animationFrame = null;
+let lastWindowPoint = { x: window.innerWidth / 2, y: window.innerHeight * 0.48 };
 const bananas = [];
 
 const monkeyOverlay = document.createElement('div');
@@ -21,59 +24,50 @@ monkeyOverlay.setAttribute('aria-live', 'polite');
 monkeyOverlay.setAttribute('aria-hidden', 'true');
 monkeyOverlay.style.position = 'fixed';
 monkeyOverlay.style.left = '50%';
-monkeyOverlay.style.top = 'clamp(11rem, 34vh, 20rem)';
-monkeyOverlay.style.transform = 'translate(-50%, 18px) scale(0.86)';
+monkeyOverlay.style.top = `${ROCKET_WINDOW_START_Y_VH}vh`;
+monkeyOverlay.style.width = '3rem';
+monkeyOverlay.style.height = '3rem';
+monkeyOverlay.style.display = 'grid';
+monkeyOverlay.style.placeItems = 'center';
+monkeyOverlay.style.transform = 'translate(-50%, -50%) scale(0.62)';
 monkeyOverlay.style.opacity = '0';
 monkeyOverlay.style.pointerEvents = 'none';
 monkeyOverlay.style.zIndex = '18';
-monkeyOverlay.style.transition = 'opacity 180ms ease, transform 220ms ease';
-monkeyOverlay.style.fontFamily = 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+monkeyOverlay.style.transition = 'opacity 120ms ease, transform 160ms ease';
+monkeyOverlay.style.filter = 'drop-shadow(0 6px 8px rgba(0, 0, 0, 0.42))';
 document.body.appendChild(monkeyOverlay);
-
-const windowFrame = document.createElement('div');
-windowFrame.style.position = 'relative';
-windowFrame.style.display = 'grid';
-windowFrame.style.placeItems = 'center';
-windowFrame.style.width = '5.8rem';
-windowFrame.style.height = '4.2rem';
-windowFrame.style.borderRadius = '46% 46% 42% 42% / 55% 55% 40% 40%';
-windowFrame.style.background = 'radial-gradient(circle at 45% 32%, rgba(248, 250, 252, 0.24), rgba(104, 216, 255, 0.22) 42%, rgba(10, 22, 46, 0.88) 74%)';
-windowFrame.style.border = '0.18rem solid rgba(255, 70, 88, 0.95)';
-windowFrame.style.boxShadow = '0 0 24px rgba(104, 216, 255, 0.28), 0 14px 34px rgba(0, 0, 0, 0.44), inset 0 0 18px rgba(255, 255, 255, 0.08)';
-monkeyOverlay.appendChild(windowFrame);
 
 const monkey = document.createElement('div');
 monkey.textContent = '🐒';
-monkey.style.fontSize = 'clamp(2rem, 5vw, 3.1rem)';
+monkey.style.fontSize = 'clamp(1.35rem, 3vw, 2.15rem)';
 monkey.style.lineHeight = '1';
 monkey.style.transformOrigin = '50% 85%';
-monkey.style.transition = 'transform 100ms linear';
-windowFrame.appendChild(monkey);
+monkey.style.transition = 'transform 80ms linear';
+monkeyOverlay.appendChild(monkey);
 
 const bananaHand = document.createElement('div');
 bananaHand.textContent = '🍌';
 bananaHand.style.position = 'absolute';
-bananaHand.style.right = '-0.6rem';
-bananaHand.style.top = '0.38rem';
-bananaHand.style.fontSize = '1.45rem';
+bananaHand.style.right = '-0.2rem';
+bananaHand.style.top = '0.28rem';
+bananaHand.style.fontSize = '1.05rem';
 bananaHand.style.opacity = '0';
 bananaHand.style.transform = 'rotate(-32deg) scale(0.78)';
-bananaHand.style.transition = 'opacity 120ms ease, transform 120ms ease';
-windowFrame.appendChild(bananaHand);
+bananaHand.style.transition = 'opacity 90ms ease, transform 90ms ease';
+monkeyOverlay.appendChild(bananaHand);
 
 const monkeyLabel = document.createElement('div');
 monkeyLabel.textContent = 'Monkey business!';
 monkeyLabel.style.position = 'absolute';
 monkeyLabel.style.left = '50%';
-monkeyLabel.style.bottom = '-0.32rem';
+monkeyLabel.style.bottom = '-0.55rem';
 monkeyLabel.style.transform = 'translate(-50%, 100%)';
-monkeyLabel.style.padding = '0.26rem 0.5rem';
+monkeyLabel.style.padding = '0.2rem 0.42rem';
 monkeyLabel.style.borderRadius = '999px';
-monkeyLabel.style.border = '1px solid rgba(255, 241, 166, 0.38)';
-monkeyLabel.style.background = 'rgba(3, 11, 25, 0.78)';
+monkeyLabel.style.border = '1px solid rgba(255, 241, 166, 0.36)';
+monkeyLabel.style.background = 'rgba(3, 11, 25, 0.72)';
 monkeyLabel.style.color = '#fff8d3';
-monkeyLabel.style.fontSize = '0.68rem';
-monkeyLabel.style.fontWeight = '950';
+monkeyLabel.style.font = '950 0.58rem ui-sans-serif, system-ui, sans-serif';
 monkeyLabel.style.letterSpacing = '0.05em';
 monkeyLabel.style.textTransform = 'uppercase';
 monkeyLabel.style.whiteSpace = 'nowrap';
@@ -92,12 +86,17 @@ function isLaunchState() {
     || action.startsWith('Flying to');
 }
 
+function getWindowPoint(elapsed = 0) {
+  const progress = Math.min(elapsed / MONKEY_GAG_DURATION_MS, 1);
+  const yVh = ROCKET_WINDOW_START_Y_VH + (ROCKET_WINDOW_ASCENT_Y_VH - ROCKET_WINDOW_START_Y_VH) * progress;
+  const x = window.innerWidth / 2 + Math.sin(progress * Math.PI * 1.4) * 10;
+  const y = window.innerHeight * (yVh / 100);
+  return { x, y };
+}
+
 function setOverlayVisible(visible) {
   monkeyOverlay.setAttribute('aria-hidden', visible ? 'false' : 'true');
   monkeyOverlay.style.opacity = visible ? '1' : '0';
-  monkeyOverlay.style.transform = visible
-    ? 'translate(-50%, 0) scale(1)'
-    : 'translate(-50%, 18px) scale(0.86)';
 }
 
 function startMonkeyGag(now) {
@@ -106,6 +105,7 @@ function startMonkeyGag(now) {
   gagActive = true;
   gagStartedAt = now;
   nextThrowIndex = 0;
+  lastWindowPoint = getWindowPoint(0);
   setOverlayVisible(true);
   monkeyLabel.textContent = MONKEY_THROW_TARGET === 'aliens' ? 'Alien snack attack!' : 'Monkey business!';
 }
@@ -123,7 +123,7 @@ function createBanana(now) {
   node.style.position = 'fixed';
   node.style.left = '0';
   node.style.top = '0';
-  node.style.fontSize = '1.45rem';
+  node.style.fontSize = '1.18rem';
   node.style.pointerEvents = 'none';
   node.style.zIndex = '17';
   node.style.filter = 'drop-shadow(0 8px 10px rgba(0, 0, 0, 0.34))';
@@ -134,12 +134,12 @@ function createBanana(now) {
   bananas.push({
     node,
     start: now,
-    startX: window.innerWidth / 2 + 36,
-    startY: window.innerHeight * 0.36 + 16,
-    velocityX: direction * (130 + nextThrowIndex * 18),
-    velocityY: -150 - nextThrowIndex * 12,
-    gravity: 390,
-    spin: direction * (260 + nextThrowIndex * 35)
+    startX: lastWindowPoint.x + direction * 14,
+    startY: lastWindowPoint.y + 4,
+    velocityX: direction * (150 + nextThrowIndex * 18),
+    velocityY: -110 - nextThrowIndex * 12,
+    gravity: 410,
+    spin: direction * (290 + nextThrowIndex * 35)
   });
 }
 
@@ -184,12 +184,17 @@ function updateMonkeyGag(now) {
 
   if (gagActive) {
     const elapsed = now - gagStartedAt;
-    const bob = Math.sin(now * 0.018) * 4;
-    const wave = Math.sin(now * 0.032) * 9;
+    const bob = Math.sin(now * 0.018) * 2.4;
+    const wave = Math.sin(now * 0.034) * 9;
+    const point = getWindowPoint(elapsed);
+    lastWindowPoint = point;
 
-    monkey.style.transform = `translateY(${bob}px) rotate(${wave}deg)`;
+    monkeyOverlay.style.left = `${point.x}px`;
+    monkeyOverlay.style.top = `${point.y}px`;
+    monkeyOverlay.style.transform = `translate(-50%, -50%) translateY(${bob}px) scale(0.72)`;
+    monkey.style.transform = `rotate(${wave}deg)`;
     bananaHand.style.opacity = elapsed < 1500 ? '1' : '0';
-    bananaHand.style.transform = `rotate(${-32 + Math.sin(now * 0.044) * 34}deg) scale(${elapsed < 1500 ? 1.04 : 0.78})`;
+    bananaHand.style.transform = `rotate(${-32 + Math.sin(now * 0.044) * 34}deg) scale(${elapsed < 1500 ? 1 : 0.78})`;
 
     while (nextThrowIndex < BANANA_THROW_TIMES_MS.length && elapsed >= BANANA_THROW_TIMES_MS[nextThrowIndex]) {
       createBanana(now);
