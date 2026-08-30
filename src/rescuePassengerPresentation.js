@@ -1,4 +1,5 @@
 const modeLabel = document.querySelector('#modeName');
+const planetLabel = document.querySelector('#planetName');
 
 let passengerAboard = false;
 let passengerRole = 'Explorer';
@@ -59,6 +60,10 @@ function getMode() {
   return modeLabel?.textContent?.trim() ?? '';
 }
 
+function getPlanet() {
+  return planetLabel?.textContent?.trim() ?? '';
+}
+
 function refreshPassengerData() {
   const rescueState = document.body.dataset.rescueNpcState ?? 'hidden';
   const role = document.body.dataset.rescueNpcRole;
@@ -71,7 +76,7 @@ function refreshPassengerData() {
     passengerAboard = true;
   }
 
-  if (rescueState === 'visible') {
+  if (rescueState === 'visible' || getPlanet() === 'Launchpad') {
     passengerAboard = false;
   }
 }
@@ -80,7 +85,8 @@ function renderPassengerCard() {
   refreshPassengerData();
 
   const mode = getMode();
-  const show = passengerAboard && mode !== 'Astronaut EVA' && mode !== 'Ready';
+  const planet = getPlanet();
+  const show = passengerAboard && planet !== 'Launchpad' && mode !== 'Astronaut EVA';
 
   passengerEmojiEl.textContent = passengerEmoji;
   passengerDetail.textContent = passengerRole;
@@ -95,9 +101,10 @@ observer.observe(document.body, {
   attributeFilter: ['data-rescue-npc-state', 'data-rescue-npc-role', 'data-rescue-npc-emoji']
 });
 
-if (modeLabel) {
-  const modeObserver = new MutationObserver(renderPassengerCard);
-  modeObserver.observe(modeLabel, { childList: true, characterData: true, subtree: true });
-}
+[modeLabel, planetLabel].forEach((label) => {
+  if (!label) return;
+  const labelObserver = new MutationObserver(renderPassengerCard);
+  labelObserver.observe(label, { childList: true, characterData: true, subtree: true });
+});
 
 renderPassengerCard();
