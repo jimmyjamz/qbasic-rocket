@@ -2,6 +2,10 @@ const loopStatusLabel = document.querySelector('#loopStatus');
 const modeLabel = document.querySelector('#modeName');
 const launchButton = document.querySelector('#launchButton');
 
+const RUN_AWAY_VISIBLE_MS = 1350;
+let launchCrewState = 'hidden';
+let runAwayStartedAt = null;
+
 const launchCrewOverlay = document.createElement('div');
 launchCrewOverlay.setAttribute('aria-hidden', 'true');
 launchCrewOverlay.style.position = 'fixed';
@@ -70,16 +74,16 @@ function createCrewMember(member, index) {
   return { wrapper, character, tool, label };
 }
 
-function getLaunchCrewState() {
+function getRawLaunchCrewState() {
   const modeText = modeLabel?.textContent?.trim() ?? '';
   const statusText = loopStatusLabel?.textContent?.trim() ?? '';
   const buttonText = launchButton?.textContent?.trim() ?? '';
 
-  if (modeText === 'In flight' || statusText.includes('Mouse guided flight') || buttonText.startsWith('Flying to')) {
+  if (modeText === 'Countdown' || statusText.startsWith('T-') || statusText === 'Launch!') {
     return 'run';
   }
 
-  if (modeText === 'Countdown' || statusText.startsWith('T-') || statusText === 'Launch!') {
+  if (modeText === 'In flight' || statusText.includes('Mouse guided flight') || buttonText.startsWith('Flying to')) {
     return 'run';
   }
 
@@ -90,20 +94,37 @@ function getLaunchCrewState() {
   return 'hidden';
 }
 
+function updateLaunchCrewState(now) {
+  const nextState = getRawLaunchCrewState();
+
+  if (nextState !== launchCrewState) {
+    launchCrewState = nextState;
+    runAwayStartedAt = nextState === 'run' ? now : null;
+  }
+
+  if (launchCrewState === 'run' && runAwayStartedAt !== null && now - runAwayStartedAt > RUN_AWAY_VISIBLE_MS) {
+    return 'hidden';
+  }
+
+  return launchCrewState;
+}
+
 function updateLaunchCrewPresentation() {
-  const state = getLaunchCrewState();
+  const now = performance.now();
+  const state = updateLaunchCrewState(now);
   launchCrewOverlay.style.opacity = state === 'hidden' ? '0' : '1';
+  launchCrewOverlay.setAttribute('aria-hidden', state === 'hidden' ? 'true' : 'false');
 
   crewMembers.forEach(({ wrapper, character, tool, label }, index) => {
     const phase = Number(wrapper.dataset.phase ?? 0);
-    const prepBob = Math.sin(performance.now() * 0.004 + phase) * 3;
+    const prepBob = Math.sin(now * 0.004 + phase) * 3;
 
     if (state === 'prep') {
       wrapper.style.left = wrapper.dataset.homeX;
       wrapper.style.opacity = '1';
       wrapper.style.transform = `translateX(-50%) translateY(${prepBob}px)`;
-      character.style.transform = `rotate(${Math.sin(performance.now() * 0.005 + phase) * 4}deg)`;
-      tool.style.transform = `rotate(${Math.sin(performance.now() * 0.008 + phase) * 18}deg)`;
+      character.style.transform = `rotate(${Math.sin(now * 0.005 + phase) * 4}deg)`;
+      tool.style.transform = `rotate(${Math.sin(now * 0.008 + phase) * 18}deg)`;
       label.textContent = index % 2 === 0 ? 'Fuel check' : 'Checklist';
       return;
     }
@@ -111,9 +132,9 @@ function updateLaunchCrewPresentation() {
     if (state === 'run') {
       wrapper.style.left = wrapper.dataset.runX;
       wrapper.style.opacity = '1';
-      wrapper.style.transform = `translateX(-50%) translateY(${Math.sin(performance.now() * 0.04 + phase) * 7}px) rotate(${index % 2 === 0 ? -7 : 7}deg)`;
-      character.style.transform = `scaleX(${Number.parseFloat(wrapper.dataset.runX ?? '0') < 0 ? -1 : 1}) rotate(${Math.sin(performance.now() * 0.045 + phase) * 9}deg)`;
-      tool.style.transform = `rotate(${Math.sin(performance.now() * 0.05 + phase) * 28}deg)`;
+      wrapper.style.transform = `translateX(-50%) translateY(${Math.sin(now * 0.04 + phase) * 7}px) rotate(${index % 2 === 0 ? -7 : 7}deg)`;
+      character.style.transform = `scaleX(${Number.parseFloat(wrapper.dataset.runX ?? '0') < 0 ? -1 : 1}) rotate(${Math.sin(now * 0.045 + phase) * 9}deg)`;
+      tool.style.transform = `rotate(${Math.sin(now * 0.05 + phase) * 28}deg)`;
       label.textContent = 'Clear out!';
       return;
     }
