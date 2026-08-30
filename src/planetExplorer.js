@@ -395,12 +395,12 @@ function updateAstronautArms(direction, isGrounded, isJetpacking, now, dt) {
   if (!leftArm || !rightArm) return;
 
   const armAlpha = 1 - Math.exp(-10 * dt);
-  const walkSwing = isGrounded ? Math.sin(now * 0.012) * 0.2 * Math.abs(direction) : 0.06 * Math.sin(now * 0.01);
-  const jetpackBrace = isJetpacking ? 0.32 : 0;
+  const walkSwing = isGrounded ? Math.sin(now * 0.012) * 0.18 * Math.abs(direction) : 0.05 * Math.sin(now * 0.01);
+  const jetpackBrace = isJetpacking ? 0.22 : 0;
   const shoulderLift = isJetpacking ? -0.18 : 0;
 
-  const leftTargetZ = 0.32 + walkSwing + jetpackBrace;
-  const rightTargetZ = -0.32 - walkSwing - jetpackBrace;
+  const leftTargetZ = -0.34 - walkSwing - jetpackBrace;
+  const rightTargetZ = 0.34 + walkSwing + jetpackBrace;
   const targetX = shoulderLift;
 
   leftArm.rotation.z = THREE.MathUtils.lerp(leftArm.rotation.z, leftTargetZ, armAlpha);
@@ -626,8 +626,8 @@ function createAstronaut() {
   group.add(backpack);
 
   const armData = [
-    { name: 'leftArm', x: -0.32, baseRotation: 0.32 },
-    { name: 'rightArm', x: 0.32, baseRotation: -0.32 }
+    { name: 'leftArm', x: -0.32, baseRotation: -0.34 },
+    { name: 'rightArm', x: 0.32, baseRotation: 0.34 }
   ];
 
   for (const { name, x, baseRotation } of armData) {
