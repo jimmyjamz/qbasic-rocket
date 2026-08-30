@@ -74,17 +74,23 @@ function createCrewMember(member, index) {
   return { wrapper, character, tool, label };
 }
 
+function canRunAwayFromStationPrep() {
+  return launchCrewState === 'prep' || (launchCrewState === 'run' && runAwayStartedAt !== null);
+}
+
 function getRawLaunchCrewState() {
   const modeText = modeLabel?.textContent?.trim() ?? '';
   const statusText = loopStatusLabel?.textContent?.trim() ?? '';
   const buttonText = launchButton?.textContent?.trim() ?? '';
+  const launchStarted = modeText === 'Countdown'
+    || statusText.startsWith('T-')
+    || statusText === 'Launch!'
+    || modeText === 'In flight'
+    || statusText.includes('Mouse guided flight')
+    || buttonText.startsWith('Flying to');
 
-  if (modeText === 'Countdown' || statusText.startsWith('T-') || statusText === 'Launch!') {
-    return 'run';
-  }
-
-  if (modeText === 'In flight' || statusText.includes('Mouse guided flight') || buttonText.startsWith('Flying to')) {
-    return 'run';
+  if (launchStarted) {
+    return canRunAwayFromStationPrep() ? 'run' : 'hidden';
   }
 
   if (modeText === 'Rocket') {
