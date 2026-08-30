@@ -15,16 +15,17 @@ const helpLabel = document.querySelector('#helpText');
 const START_Y = -2.7;
 const SPACE_Y = 7.8;
 const LAND_Y = -1.25;
+const ASTRONAUT_GROUND_Y = LAND_Y + 0.82;
+const ASTRONAUT_MAX_Y = LAND_Y + 3.15;
 const LAUNCH_TIME_MS = 7200;
 const STEERING_LIMIT_X = 4.8;
 const STEERING_LIMIT_Z = 1.45;
 const WALK_LIMIT = 5.6;
-const ASTRONAUT_GROUND_Y = LAND_Y + 0.82;
-const JETPACK_MAX_Y = LAND_Y + 3.35;
-const JETPACK_THRUST = 7.8;
-const JETPACK_GRAVITY = 5.6;
-const JETPACK_MAX_UP_SPEED = 2.8;
-const JETPACK_MAX_FALL_SPEED = -3.1;
+const WALK_SPEED = 2.6;
+const GRAVITY = -7.2;
+const JETPACK_THRUST = 12.4;
+const MAX_FALL_SPEED = -5.4;
+const MAX_RISE_SPEED = 4.2;
 
 const PLANETS = [
   {
@@ -107,6 +108,9 @@ scene.add(starField);
 const trail = createTrailSystem();
 scene.add(trail.points);
 
+const jetpackExhaust = createJetpackExhaustSystem();
+scene.add(jetpackExhaust.points);
+
 const pointerRaycaster = new THREE.Raycaster();
 const steeringPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
 const pointer = {
@@ -126,6 +130,7 @@ let lastTime = performance.now();
 let astronautVelocityX = 0;
 let astronautVelocityY = 0;
 let lastLandedX = 0;
+let jetpackActive = false;
 
 launchButton.addEventListener('click', launchToSelectedPlanet);
 actionButton.addEventListener('click', handleContextAction);
@@ -134,12 +139,12 @@ resetButton.addEventListener('click', resetExperience);
 window.addEventListener('resize', resizeRenderer);
 window.addEventListener('pointermove', updatePointerTarget);
 window.addEventListener('keydown', (event) => {
-  if (event.code === 'Space' && (flightMode === 'ready' || flightMode === 'walking')) {
+  if (event.code === 'Space') {
     event.preventDefault();
   }
 
-  keys.add(event.code);
   if (event.repeat) return;
+  keys.add(event.code);
 
   if (event.code === 'KeyE') handleContextAction();
   if (event.code === 'KeyN') chooseNextPlanet();
@@ -170,10 +175,14 @@ function animate(now) {
     }
   } else if (flightMode === 'walking') {
     updateAstronaut(dt, now);
+  } else {
+    jetpackActive = false;
   }
 
-  animateFlames(now, throttle);
+  animateRocketFlames(now, throttle);
+  animateJetpackFlames(now, jetpackActive);
   updateTrail(dt, throttle);
+  updateJetpackExhaust(dt, now, jetpackActive);
   updateCamera(dt);
   updateDestinationOrbs(now, dt);
   updatePlanetSurface(now, dt);
@@ -197,7 +206,7 @@ function launchToSelectedPlanet() {
   }
 
   astronaut.visible = false;
-  updateAstronautJetpack(performance.now(), false, 0);
+  jetpackActive = false;
   flightMode = 'launching';
   launchStart = performance.now();
   launchButton.disabled = true;
@@ -221,7 +230,7 @@ function chooseNextPlanet() {
 function handleContextAction() {
   if (flightMode === 'landed') {
     exitRocket();
-  } else if (flightMode === 'walking' && isAstronautNearRocket()) {
+  } else if (flightMode === 'walking' && canBoardRocket()) {
     enterRocket();
   }
 }
@@ -233,8 +242,8 @@ function exitRocket() {
   astronaut.rotation.set(0, 0, 0);
   astronautVelocityX = 0;
   astronautVelocityY = 0;
+  jetpackActive = false;
   rocket.rotation.set(0, 0, 0);
-  updateAstronautJetpack(performance.now(), false, 0);
   updateHud(112000, 'Suit ready', 'Exploring');
   updateUi();
 }
@@ -244,7 +253,7 @@ function enterRocket() {
   astronaut.visible = false;
   astronautVelocityX = 0;
   astronautVelocityY = 0;
-  updateAstronautJetpack(performance.now(), false, 0);
+  jetpackActive = false;
   rocket.position.x = THREE.MathUtils.lerp(rocket.position.x, 0, 0.45);
   updateHud(112000, 'Docked', 'Ready for next planet');
   updateUi();
@@ -340,62 +349,52 @@ function updatePointerTarget(event) {
 function updateAstronaut(dt, now) {
   const left = keys.has('KeyA') || keys.has('ArrowLeft');
   const right = keys.has('KeyD') || keys.has('ArrowRight');
-  const jetpackActive = keys.has('Space');
   const direction = Number(right) - Number(left);
-  const groundY = ASTRONAUT_GROUND_Y;
-  const isGrounded = astronaut.position.y <= groundY + 0.015 && astronautVelocityY <= 0.02;
-  const desiredVelocity = direction * (jetpackActive || !isGrounded ? 3.15 : 2.6);
+  const desiredVelocity = direction * WALK_SPEED;
+  const isThrusting = keys.has('Space');
+  const isGrounded = astronaut.position.y <= ASTRONAUT_GROUND_Y + 0.015;
+
+  jetpackActive = isThrusting && astronaut.position.y < ASTRONAUT_MAX_Y - 0.02;
 
   astronautVelocityX = THREE.MathUtils.lerp(astronautVelocityX, desiredVelocity, 1 - Math.exp(-12 * dt));
-  astronautVelocityY += (jetpackActive ? JETPACK_THRUST : -JETPACK_GRAVITY) * dt;
-  astronautVelocityY = THREE.MathUtils.clamp(astronautVelocityY, JETPACK_MAX_FALL_SPEED, JETPACK_MAX_UP_SPEED);
+  astronautVelocityY += (jetpackActive ? JETPACK_THRUST : GRAVITY) * dt;
+  astronautVelocityY = THREE.MathUtils.clamp(astronautVelocityY, MAX_FALL_SPEED, MAX_RISE_SPEED);
 
   astronaut.position.x = THREE.MathUtils.clamp(astronaut.position.x + astronautVelocityX * dt, -WALK_LIMIT, WALK_LIMIT);
-  astronaut.position.y += astronautVelocityY * dt;
+  astronaut.position.y = THREE.MathUtils.clamp(astronaut.position.y + astronautVelocityY * dt, ASTRONAUT_GROUND_Y, ASTRONAUT_MAX_Y);
 
-  if (astronaut.position.y <= groundY) {
-    astronaut.position.y = groundY + Math.sin(now * 0.01) * 0.025 * Math.abs(direction);
+  if (astronaut.position.y <= ASTRONAUT_GROUND_Y + 0.001 && astronautVelocityY < 0) {
+    astronaut.position.y = ASTRONAUT_GROUND_Y;
     astronautVelocityY = 0;
-  } else if (astronaut.position.y >= JETPACK_MAX_Y) {
-    astronaut.position.y = JETPACK_MAX_Y;
-    astronautVelocityY = Math.min(astronautVelocityY, 0);
   }
 
-  const airHeight = Math.max(0, astronaut.position.y - groundY);
-  astronaut.rotation.z = THREE.MathUtils.lerp(astronaut.rotation.z, -direction * (jetpackActive ? 0.22 : 0.12), 1 - Math.exp(-8 * dt));
-  astronaut.rotation.x = THREE.MathUtils.lerp(astronaut.rotation.x, jetpackActive ? -0.12 : 0, 1 - Math.exp(-6 * dt));
+  if (astronaut.position.y >= ASTRONAUT_MAX_Y - 0.001 && astronautVelocityY > 0) {
+    astronautVelocityY = 0;
+  }
+
+  const walkBob = isGrounded ? Math.sin(now * 0.01) * 0.025 * Math.abs(direction) : 0;
+  astronaut.children[0].position.y = 0.46 + walkBob;
+  astronaut.rotation.z = THREE.MathUtils.lerp(astronaut.rotation.z, -direction * 0.12, 1 - Math.exp(-8 * dt));
+  astronaut.rotation.x = THREE.MathUtils.lerp(astronaut.rotation.x, jetpackActive ? -0.08 : 0, 1 - Math.exp(-7 * dt));
 
   if (direction !== 0) {
-    astronaut.rotation.y = THREE.MathUtils.lerp(astronaut.rotation.y, direction > 0 ? 0.28 : -0.28, 1 - Math.exp(-8 * dt));
-  } else {
-    astronaut.rotation.y = THREE.MathUtils.lerp(astronaut.rotation.y, 0, 1 - Math.exp(-5 * dt));
+    astronaut.rotation.y = direction > 0 ? 0.22 : -0.22;
   }
 
-  updateAstronautJetpack(now, jetpackActive, airHeight);
-
   const nearRocket = isAstronautNearRocket();
-  actionButton.disabled = !nearRocket;
-  actionButton.textContent = nearRocket ? 'Enter rocket (E)' : 'Fly back to rocket';
-  throttleLabel.textContent = jetpackActive ? 'Jetpack' : airHeight > 0.1 ? 'Drifting' : 'Suit ready';
-  loopStatusLabel.textContent = nearRocket ? 'Ready to board' : jetpackActive ? 'Jetpacking' : airHeight > 0.1 ? 'Floating' : 'Exploring';
-}
-
-function updateAstronautJetpack(now, active, airHeight) {
-  const flame = astronaut.getObjectByName('jetpackFlame');
-  const glow = astronaut.getObjectByName('jetpackGlow');
-  const visible = active && flightMode === 'walking';
-
-  flame.visible = visible;
-  glow.intensity = visible ? 1.6 + Math.min(airHeight, 1.6) * 0.45 : 0;
-
-  if (!visible) return;
-
-  const flicker = 1 + Math.sin(now * 0.05) * 0.12 + Math.random() * 0.12;
-  flame.scale.set(0.82 + Math.random() * 0.08, flicker, 0.82 + Math.random() * 0.08);
+  const boardable = canBoardRocket();
+  actionButton.disabled = !boardable;
+  actionButton.textContent = boardable ? 'Enter rocket (E)' : nearRocket ? 'Land to enter rocket' : 'Return to rocket';
+  loopStatusLabel.textContent = jetpackActive ? 'Jetpack firing' : boardable ? 'Ready to board' : 'Exploring';
+  throttleLabel.textContent = jetpackActive ? 'Jetpack' : isGrounded ? 'Suit ready' : 'Coasting';
 }
 
 function isAstronautNearRocket() {
-  return Math.abs(astronaut.position.x - rocket.position.x) < 1.35 && astronaut.position.y < ASTRONAUT_GROUND_Y + 0.65;
+  return Math.abs(astronaut.position.x - rocket.position.x) < 1.35;
+}
+
+function canBoardRocket() {
+  return isAstronautNearRocket() && astronaut.position.y <= ASTRONAUT_GROUND_Y + 0.18;
 }
 
 function rebuildPlanetSurface(planet) {
@@ -605,34 +604,35 @@ function createAstronaut() {
   backpack.position.set(0, 0.55, -0.26);
   group.add(backpack);
 
-  const jetpackFlame = new THREE.Group();
-  jetpackFlame.name = 'jetpackFlame';
-  jetpackFlame.visible = false;
+  const jetpackFlames = new THREE.Group();
+  jetpackFlames.name = 'jetpackFlames';
+  jetpackFlames.position.set(0, 0.32, -0.38);
 
   for (const x of [-0.09, 0.09]) {
-    const outerFlame = new THREE.Mesh(
-      new THREE.ConeGeometry(0.075, 0.46, 18),
-      new THREE.MeshBasicMaterial({ color: 0xff7a21, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending })
+    const flame = new THREE.Mesh(
+      new THREE.ConeGeometry(0.07, 0.42, 18),
+      new THREE.MeshBasicMaterial({ color: 0xff9b2f, transparent: true, opacity: 0.86, blending: THREE.AdditiveBlending })
     );
-    outerFlame.rotation.x = Math.PI;
-    outerFlame.position.set(x, 0.18, -0.34);
-    jetpackFlame.add(outerFlame);
+    flame.position.set(x, -0.18, 0);
+    flame.rotation.x = Math.PI;
+    jetpackFlames.add(flame);
 
-    const innerFlame = new THREE.Mesh(
-      new THREE.ConeGeometry(0.045, 0.31, 18),
-      new THREE.MeshBasicMaterial({ color: 0xfff1a6, transparent: true, opacity: 0.92, blending: THREE.AdditiveBlending })
+    const hotCore = new THREE.Mesh(
+      new THREE.ConeGeometry(0.038, 0.28, 18),
+      new THREE.MeshBasicMaterial({ color: 0xfff2a6, transparent: true, opacity: 0.92, blending: THREE.AdditiveBlending })
     );
-    innerFlame.rotation.x = Math.PI;
-    innerFlame.position.set(x, 0.21, -0.345);
-    jetpackFlame.add(innerFlame);
+    hotCore.position.set(x, -0.12, 0.015);
+    hotCore.rotation.x = Math.PI;
+    jetpackFlames.add(hotCore);
   }
 
-  group.add(jetpackFlame);
+  const jetpackLight = new THREE.PointLight(0xff9b2f, 0, 3.5);
+  jetpackLight.name = 'jetpackLight';
+  jetpackLight.position.set(0, 0.18, -0.34);
+  group.add(jetpackLight);
 
-  const jetpackGlow = new THREE.PointLight(0xff9a32, 0, 4);
-  jetpackGlow.name = 'jetpackGlow';
-  jetpackGlow.position.set(0, 0.28, -0.36);
-  group.add(jetpackGlow);
+  jetpackFlames.visible = false;
+  group.add(jetpackFlames);
 
   for (const x of [-0.18, 0.18]) {
     const leg = new THREE.Mesh(new THREE.CapsuleGeometry(0.08, 0.28, 6, 10), suit);
@@ -693,7 +693,6 @@ function createLaunchPad() {
 
   tower.position.set(-1.55, 0, -0.35);
   group.add(tower);
-
   return group;
 }
 
@@ -779,7 +778,41 @@ function createTrailSystem() {
   };
 }
 
-function animateFlames(now, throttle) {
+function createJetpackExhaustSystem() {
+  const count = 220;
+  const positions = new Float32Array(count * 3);
+  const velocities = new Float32Array(count * 3);
+  const lives = new Float32Array(count);
+
+  for (let i = 0; i < count; i += 1) {
+    lives[i] = -1;
+    positions[i * 3] = 0;
+    positions[i * 3 + 1] = -50;
+    positions[i * 3 + 2] = 0;
+  }
+
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+  const material = new THREE.PointsMaterial({
+    color: 0xffd8a3,
+    size: 0.12,
+    transparent: true,
+    opacity: 0,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending
+  });
+
+  return {
+    points: new THREE.Points(geometry, material),
+    positions,
+    velocities,
+    lives,
+    cursor: 0
+  };
+}
+
+function animateRocketFlames(now, throttle) {
   const flameGroup = rocket.getObjectByName('flameGroup');
   const visible = throttle > 0.02;
   flameGroup.visible = visible;
@@ -790,6 +823,20 @@ function animateFlames(now, throttle) {
 
   const flicker = 1 + Math.sin(now * 0.03) * 0.08 + Math.random() * 0.08;
   flameGroup.scale.set(0.84 + throttle * 0.42, (0.74 + throttle * 0.55) * flicker, 0.84 + throttle * 0.42);
+}
+
+function animateJetpackFlames(now, active) {
+  const flameGroup = astronaut.getObjectByName('jetpackFlames');
+  const light = astronaut.getObjectByName('jetpackLight');
+
+  flameGroup.visible = active;
+  light.intensity = active ? 2.6 + Math.sin(now * 0.04) * 0.45 : 0;
+
+  if (!active) return;
+
+  const flicker = 1 + Math.sin(now * 0.05) * 0.12 + Math.random() * 0.1;
+  flameGroup.scale.set(1 + Math.random() * 0.05, 0.85 + flicker * 0.28, 1 + Math.random() * 0.05);
+  flameGroup.rotation.z = Math.sin(now * 0.02) * 0.045;
 }
 
 function updateTrail(dt, throttle) {
@@ -831,6 +878,54 @@ function recycleParticle(index, throttle) {
   trail.velocities[p + 1] = -2.4 - Math.random() * 2.4 - throttle * 1.2;
   trail.velocities[p + 2] = (Math.random() - 0.5) * 0.9;
   trail.lives[index] = 0.45 + Math.random() * 0.72;
+}
+
+function updateJetpackExhaust(dt, now, active) {
+  const spawnCount = active ? 10 : 0;
+
+  for (let i = 0; i < spawnCount; i += 1) {
+    recycleJetpackParticle(jetpackExhaust.cursor, now);
+    jetpackExhaust.cursor = (jetpackExhaust.cursor + 1) % jetpackExhaust.lives.length;
+  }
+
+  let liveCount = 0;
+  for (let i = 0; i < jetpackExhaust.lives.length; i += 1) {
+    if (jetpackExhaust.lives[i] <= 0) continue;
+
+    liveCount += 1;
+    const p = i * 3;
+    jetpackExhaust.lives[i] -= dt;
+    jetpackExhaust.positions[p] += jetpackExhaust.velocities[p] * dt;
+    jetpackExhaust.positions[p + 1] += jetpackExhaust.velocities[p + 1] * dt;
+    jetpackExhaust.positions[p + 2] += jetpackExhaust.velocities[p + 2] * dt;
+    jetpackExhaust.velocities[p + 1] -= dt * 0.75;
+    jetpackExhaust.velocities[p] *= 1 + dt * 0.65;
+    jetpackExhaust.velocities[p + 2] *= 1 + dt * 0.65;
+
+    if (jetpackExhaust.lives[i] <= 0) {
+      jetpackExhaust.positions[p + 1] = -50;
+    }
+  }
+
+  jetpackExhaust.points.geometry.attributes.position.needsUpdate = true;
+  jetpackExhaust.points.material.opacity = Math.min(0.82, liveCount / 80);
+  jetpackExhaust.points.material.size = active ? 0.14 + Math.sin(now * 0.018) * 0.025 : 0.11;
+}
+
+function recycleJetpackParticle(index, now) {
+  const p = index * 3;
+  const side = index % 2 === 0 ? -1 : 1;
+  const flameSpread = 0.08 + Math.random() * 0.1;
+  const smokeSpread = 0.18 + Math.random() * 0.16;
+
+  jetpackExhaust.positions[p] = astronaut.position.x + side * 0.09 + (Math.random() - 0.5) * flameSpread;
+  jetpackExhaust.positions[p + 1] = astronaut.position.y + 0.15 + (Math.random() - 0.5) * 0.06;
+  jetpackExhaust.positions[p + 2] = astronaut.position.z - 0.32 + (Math.random() - 0.5) * 0.08;
+
+  jetpackExhaust.velocities[p] = side * (0.18 + Math.random() * 0.26) + (Math.random() - 0.5) * smokeSpread;
+  jetpackExhaust.velocities[p + 1] = -2.3 - Math.random() * 1.8 - Math.abs(astronautVelocityY) * 0.18;
+  jetpackExhaust.velocities[p + 2] = -0.12 - Math.random() * 0.38;
+  jetpackExhaust.lives[index] = 0.38 + Math.random() * 0.38 + Math.sin(now * 0.02 + index) * 0.03;
 }
 
 function updatePlanetSurface(now, dt) {
@@ -893,7 +988,7 @@ function updateUi() {
   } else if (flightMode === 'walking') {
     launchButton.disabled = true;
     nextButton.disabled = true;
-    helpLabel.textContent = 'Walk with A/D or arrow keys. Hold Space to fire the jetpack, then return near the rocket and press E to climb back in.';
+    helpLabel.textContent = 'Walk with A/D or arrows. Hold Space for animated jetpack flames and exhaust clouds. Land near the rocket and press E to climb back in.';
   }
 }
 
@@ -905,13 +1000,13 @@ function resetExperience() {
   lastLandedX = 0;
   astronautVelocityX = 0;
   astronautVelocityY = 0;
+  jetpackActive = false;
 
   rocket.position.set(0, START_Y, 0);
   rocket.rotation.set(0, 0, 0);
   astronaut.visible = false;
   astronaut.position.set(0, ASTRONAUT_GROUND_Y, 0.18);
   astronaut.rotation.set(0, 0, 0);
-  updateAstronautJetpack(performance.now(), false, 0);
   planetSurface.visible = false;
   launchPad.visible = true;
   flameLight.intensity = 0;
@@ -921,11 +1016,23 @@ function resetExperience() {
   const flameGroup = rocket.getObjectByName('flameGroup');
   flameGroup.visible = false;
 
+  const jetpackFlames = astronaut.getObjectByName('jetpackFlames');
+  const jetpackLight = astronaut.getObjectByName('jetpackLight');
+  jetpackFlames.visible = false;
+  jetpackLight.intensity = 0;
+
   for (let i = 0; i < trail.lives.length; i += 1) {
     trail.lives[i] = -1;
     trail.positions[i * 3 + 1] = -50;
   }
   trail.points.geometry.attributes.position.needsUpdate = true;
+
+  for (let i = 0; i < jetpackExhaust.lives.length; i += 1) {
+    jetpackExhaust.lives[i] = -1;
+    jetpackExhaust.positions[i * 3 + 1] = -50;
+  }
+  jetpackExhaust.points.geometry.attributes.position.needsUpdate = true;
+  jetpackExhaust.points.material.opacity = 0;
 
   camera.position.set(0, 2.4, 12);
   camera.lookAt(0, 0, 0);
