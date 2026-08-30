@@ -106,6 +106,11 @@ function readUiState() {
   };
 }
 
+function getNextLaunchCopy(state) {
+  const launchText = state.launchAction || 'Fly to next planet';
+  return launchText.match(/^(Launch|Fly)/i) ? launchText : 'Fly to the next planet';
+}
+
 function getMissionCopy(state) {
   if (state.status === 'Vortex reset' || state.throttle === 'Checkpoint') {
     return {
@@ -135,11 +140,20 @@ function getMissionCopy(state) {
   }
 
   if (state.mode === 'Landed') {
+    if (state.rescueState === 'boarded') {
+      return {
+        title: 'Mission handoff complete',
+        objective: `Explorer secured. ${getNextLaunchCopy(state)} when ready.`,
+        badge: 'Next loop',
+        step: 3
+      };
+    }
+
     if (state.rescueState === 'rescued') {
       return {
-        title: 'Rescue complete',
-        objective: 'The explorer is safe. Board the rocket and continue the planet loop when ready.',
-        badge: 'Complete',
+        title: 'Board the rocket',
+        objective: 'The explorer is safe. Board the rocket to lock in the rescue and continue the planet loop.',
+        badge: 'Board',
         step: 3
       };
     }
@@ -192,7 +206,7 @@ function getMissionCopy(state) {
     if (state.rescueState === 'rescued') {
       return {
         title: 'Rescue complete',
-        objective: 'Great job. The explorer is safe. Return to the rocket and continue the loop.',
+        objective: 'Great job. The explorer is safe. Move to the rocket and press E to board.',
         badge: 'Complete',
         step: 3
       };
