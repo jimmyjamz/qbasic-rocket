@@ -10,7 +10,7 @@ The current slice expands that idea into a tiny planet-exploration loop:
 2. guide it with the mouse while it flies;
 3. land on an authored planet;
 4. exit as an astronaut;
-5. walk around the terrain;
+5. walk and jetpack around the terrain;
 6. re-enter the rocket;
 7. fly to another planet and repeat.
 
@@ -65,6 +65,7 @@ Astronaut mode:
 
 - **Exit Rocket** or **E**: step out after landing.
 - **A/D** or **Left/Right arrows**: walk around the planet terrain.
+- **Hold Space**: fire the jetpack, lift off the terrain, and drift with gravity.
 - Return near the rocket and press **E** or use **Enter Rocket** to climb back in.
 
 ## Production build check
@@ -91,6 +92,7 @@ The modern version maps that same loop to a browser animation frame:
 3. update flame and exhaust particles,
 4. land on a planet,
 5. switch control from rocket to astronaut,
-6. render the next frame.
+6. apply jetpack thrust and gravity when Space is held,
+7. render the next frame.
 
 That makes it a nice example of how the core idea of programming has not changed much, even though the tools and visuals are dramatically better.
