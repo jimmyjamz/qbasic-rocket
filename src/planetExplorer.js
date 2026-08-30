@@ -27,6 +27,10 @@ const JETPACK_THRUST = 12.4;
 const MAX_FALL_SPEED = -5.4;
 const MAX_RISE_SPEED = 4.2;
 const SCENE_SWAP_PROGRESS = 0.5;
+const BLACK_HOLE_DANGER_ZONE = 0.32;
+const BLACK_HOLE_HOLD_MS = 5000;
+const BLACK_HOLE_WARNING_MS = 2600;
+const BLACK_HOLE_SEQUENCE_MS = 2100;
 
 const PLANETS = [
   {
@@ -115,6 +119,9 @@ scene.add(trail.points);
 const jetpackExhaust = createJetpackExhaustSystem();
 scene.add(jetpackExhaust.points);
 
+const blackHole = createBlackHoleVortex();
+scene.add(blackHole);
+
 const pointerRaycaster = new THREE.Raycaster();
 const steeringPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
 const pointer = {
@@ -123,6 +130,7 @@ const pointer = {
   hasInput: false
 };
 const steeringTarget = new THREE.Vector3(0, START_Y, 0);
+const blackHolePullTarget = new THREE.Vector3();
 const keys = new Set();
 
 let currentPlanetIndex = 0;
@@ -136,6 +144,9 @@ let jetpackActive = false;
 let lastLandedX = 0;
 let hasLeftLaunchpad = false;
 let hasSwappedDestinationScene = false;
+let blackHoleDangerStart = null;
+let blackHoleSequenceStart = null;
+let isBlackHoleSequenceActive = false;
 
 launchButton.addEventListener('click', launchToSelectedPlanet);
 actionButton.addEventListener('click', handleContextAction);
@@ -179,15 +190,22 @@ function animate(now) {
       completeLanding();
     }
   } else if (flightMode === 'walking') {
-    updateAstronaut(dt, now);
+    if (isBlackHoleSequenceActive) {
+      updateBlackHoleSequence(dt, now);
+    } else {
+      updateAstronaut(dt, now);
+      updateBlackHoleRisk(now);
+    }
   } else {
     jetpackActive = false;
+    blackHoleDangerStart = null;
   }
 
   animateRocketFlames(now, throttle);
   animateJetpackFlames(now, jetpackActive);
   updateTrail(dt, throttle);
   updateJetpackExhaust(dt, now, jetpackActive);
+  updateBlackHoleVortex(now, dt);
   updateLaunchSpectators(now, dt);
   updateCamera(dt);
   updateDestinationOrbs(now, dt);
@@ -211,6 +229,7 @@ function launchToSelectedPlanet() {
     targetPlanetIndex = (currentPlanetIndex + 1) % PLANETS.length;
   }
 
+  resetBlackHoleState();
   astronaut.visible = false;
   jetpackActive = false;
   hasSwappedDestinationScene = false;
@@ -237,16 +256,18 @@ function chooseNextPlanet() {
 function handleContextAction() {
   if (flightMode === 'landed') {
     exitRocket();
-  } else if (flightMode === 'walking' && canBoardRocket()) {
+  } else if (flightMode === 'walking' && canBoardRocket() && !isBlackHoleSequenceActive) {
     enterRocket();
   }
 }
 
 function exitRocket() {
+  resetBlackHoleState();
   flightMode = 'walking';
   astronaut.visible = true;
   astronaut.position.set(rocket.position.x + 1.05, ASTRONAUT_GROUND_Y, 0.18);
   astronaut.rotation.set(0, 0, 0);
+  astronaut.scale.setScalar(1);
   astronautVelocityX = 0;
   astronautVelocityY = 0;
   jetpackActive = false;
@@ -256,6 +277,7 @@ function exitRocket() {
 }
 
 function enterRocket() {
+  resetBlackHoleState();
   flightMode = 'landed';
   astronaut.visible = false;
   astronautVelocityX = 0;
@@ -270,6 +292,7 @@ function completeLanding() {
   const planet = PLANETS[targetPlanetIndex];
   currentPlanetIndex = targetPlanetIndex;
 
+  resetBlackHoleState();
   flightMode = 'landed';
   launchStart = null;
   rocket.position.set(lastLandedX, LAND_Y, 0);
@@ -436,6 +459,127 @@ function updateAstronautArms(direction, isGrounded, isJetpacking, now, dt) {
   rightArm.rotation.z = THREE.MathUtils.lerp(rightArm.rotation.z, rightTargetZ, armAlpha);
   leftArm.rotation.x = THREE.MathUtils.lerp(leftArm.rotation.x, targetX, armAlpha);
   rightArm.rotation.x = THREE.MathUtils.lerp(rightArm.rotation.x, targetX, armAlpha);
+}
+
+function updateBlackHoleRisk(now) {
+  if (isBlackHoleSequenceActive) return;
+
+  const nearCeiling = astronaut.position.y >= ASTRONAUT_MAX_Y - BLACK_HOLE_DANGER_ZONE;
+  const stillJetpackingAtCeiling = jetpackActive && nearCeiling;
+
+  if (!stillJetpackingAtCeiling) {
+    if (blackHoleDangerStart !== null) {
+      blackHoleDangerStart = null;
+      updateUi();
+    }
+    return;
+  }
+
+  if (blackHoleDangerStart === null) {
+    blackHoleDangerStart = now;
+  }
+
+  const heldMs = now - blackHoleDangerStart;
+  const remainingSeconds = Math.max(0, Math.ceil((BLACK_HOLE_HOLD_MS - heldMs) / 1000));
+
+  if (heldMs >= BLACK_HOLE_WARNING_MS) {
+    throttleLabel.textContent = 'Danger';
+    loopStatusLabel.textContent = `Vortex warning: ${remainingSeconds}s`;
+    helpLabel.textContent = 'Jetpack ceiling unstable! Drop lower now or a black hole will reset you to the rocket.';
+  }
+
+  if (heldMs >= BLACK_HOLE_HOLD_MS) {
+    startBlackHoleSequence(now);
+  }
+}
+
+function startBlackHoleSequence(now) {
+  if (isBlackHoleSequenceActive) return;
+
+  isBlackHoleSequenceActive = true;
+  blackHoleSequenceStart = now;
+  blackHoleDangerStart = null;
+  astronautVelocityX = 0;
+  astronautVelocityY = 0;
+  jetpackActive = false;
+  keys.delete('Space');
+  blackHole.position.set(astronaut.position.x, astronaut.position.y + 0.92, astronaut.position.z - 0.36);
+  blackHole.scale.setScalar(0.35);
+  blackHole.visible = true;
+  launchButton.disabled = true;
+  actionButton.disabled = true;
+  nextButton.disabled = true;
+  throttleLabel.textContent = 'Vortex';
+  loopStatusLabel.textContent = 'Black hole!';
+  helpLabel.textContent = 'Too high for too long! The astronaut is spinning back to the checkpoint.';
+}
+
+function updateBlackHoleSequence(dt, now) {
+  if (!isBlackHoleSequenceActive || blackHoleSequenceStart === null) return;
+
+  const sequenceProgress = THREE.MathUtils.clamp((now - blackHoleSequenceStart) / BLACK_HOLE_SEQUENCE_MS, 0, 1);
+  const eased = easeInOutCubic(sequenceProgress);
+  const pullStrength = 0.05 + eased * 0.2;
+
+  blackHolePullTarget.copy(blackHole.position);
+  astronaut.position.lerp(blackHolePullTarget, pullStrength);
+  astronaut.rotation.z += dt * (7 + sequenceProgress * 24);
+  astronaut.rotation.y += dt * (5 + sequenceProgress * 16);
+  astronaut.rotation.x += dt * (3 + sequenceProgress * 12);
+  astronaut.scale.setScalar(THREE.MathUtils.lerp(1, 0.12, eased));
+  loopStatusLabel.textContent = sequenceProgress < 0.7 ? 'Spinning out!' : 'Checkpoint reset';
+  throttleLabel.textContent = 'Vortex';
+
+  if (sequenceProgress >= 1) {
+    resetToLastCheckpoint();
+  }
+}
+
+function updateBlackHoleVortex(now, dt) {
+  if (!blackHole.visible) return;
+
+  const sequenceProgress = blackHoleSequenceStart
+    ? THREE.MathUtils.clamp((now - blackHoleSequenceStart) / BLACK_HOLE_SEQUENCE_MS, 0, 1)
+    : 0;
+  const pulse = 1 + Math.sin(now * 0.018) * 0.08;
+  blackHole.scale.setScalar((0.55 + sequenceProgress * 1.15) * pulse);
+  blackHole.rotation.z -= dt * (2.8 + sequenceProgress * 8);
+  blackHole.rotation.y += dt * (1.2 + sequenceProgress * 3);
+
+  blackHole.children.forEach((child, index) => {
+    child.rotation.z += dt * (index % 2 === 0 ? 2.3 + index : -1.8 - index);
+    child.rotation.x += dt * 0.25 * (index + 1);
+  });
+}
+
+function resetToLastCheckpoint() {
+  resetBlackHoleState();
+  flightMode = 'landed';
+  launchStart = null;
+  jetpackActive = false;
+  astronautVelocityX = 0;
+  astronautVelocityY = 0;
+  keys.delete('Space');
+  rocket.position.set(lastLandedX, LAND_Y, 0);
+  rocket.rotation.set(0, 0, 0);
+  astronaut.visible = false;
+  astronaut.position.set(rocket.position.x + 1.05, ASTRONAUT_GROUND_Y, 0.18);
+  astronaut.rotation.set(0, 0, 0);
+  astronaut.scale.setScalar(1);
+  launchButton.disabled = false;
+  actionButton.disabled = false;
+  nextButton.disabled = false;
+  updateHud(112000, 'Checkpoint', 'Vortex reset');
+  updateUi();
+}
+
+function resetBlackHoleState() {
+  blackHoleDangerStart = null;
+  blackHoleSequenceStart = null;
+  isBlackHoleSequenceActive = false;
+  blackHole.visible = false;
+  blackHole.scale.setScalar(1);
+  astronaut.scale.setScalar(1);
 }
 
 function isAstronautNearRocket() {
@@ -993,6 +1137,42 @@ function createJetpackExhaustSystem() {
   };
 }
 
+function createBlackHoleVortex() {
+  const group = new THREE.Group();
+  group.visible = false;
+
+  const coreMaterial = new THREE.MeshBasicMaterial({ color: 0x030006 });
+  const glowMaterial = new THREE.MeshBasicMaterial({
+    color: 0x7a5cff,
+    transparent: true,
+    opacity: 0.34,
+    blending: THREE.AdditiveBlending,
+    side: THREE.DoubleSide
+  });
+  const ringMaterial = new THREE.MeshBasicMaterial({
+    color: 0x46d7ff,
+    transparent: true,
+    opacity: 0.52,
+    blending: THREE.AdditiveBlending
+  });
+
+  const core = new THREE.Mesh(new THREE.SphereGeometry(0.28, 28, 18), coreMaterial);
+  group.add(core);
+
+  const glow = new THREE.Mesh(new THREE.RingGeometry(0.32, 0.78, 42), glowMaterial);
+  glow.rotation.x = Math.PI / 2.7;
+  group.add(glow);
+
+  for (let i = 0; i < 3; i += 1) {
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.46 + i * 0.18, 0.018, 8, 72), ringMaterial);
+    ring.rotation.x = Math.PI / 2 + i * 0.42;
+    ring.rotation.y = i * 0.62;
+    group.add(ring);
+  }
+
+  return group;
+}
+
 function animateRocketFlames(now, throttle) {
   const flameGroup = rocket.getObjectByName('flameGroup');
   const visible = throttle > 0.02;
@@ -1179,7 +1359,7 @@ function updateUi() {
   } else if (flightMode === 'walking') {
     launchButton.disabled = true;
     nextButton.disabled = true;
-    helpLabel.textContent = 'Walk with A/D or arrows. Hold Space for the jetpack. Return near the rocket, land, and press E to climb back in.';
+    helpLabel.textContent = 'Walk with A/D or arrows. Hold Space for the jetpack. Stay too high for too long and the black hole resets you to the rocket.';
   }
 }
 
@@ -1200,12 +1380,14 @@ function resetExperience() {
   astronaut.visible = false;
   astronaut.position.set(0, ASTRONAUT_GROUND_Y, 0.18);
   astronaut.rotation.set(0, 0, 0);
+  astronaut.scale.setScalar(1);
   planetSurface.visible = false;
   launchPad.visible = true;
   launchSpectators.visible = true;
   flameLight.intensity = 0;
   steeringTarget.set(0, START_Y, 0);
   setPlanetAtmosphere(PLANETS[0]);
+  resetBlackHoleState();
 
   const flameGroup = rocket.getObjectByName('flameGroup');
   flameGroup.visible = false;
