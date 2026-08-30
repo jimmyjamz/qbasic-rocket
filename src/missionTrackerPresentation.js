@@ -102,7 +102,8 @@ function readUiState() {
     help: helpLabel?.textContent?.trim() ?? '',
     rescueState: document.body.dataset.rescueNpcState ?? 'hidden',
     rescueProgress: Number(document.body.dataset.rescueNpcProgress ?? 0),
-    rescueReturnProgress: Number(document.body.dataset.rescueNpcReturnProgress ?? 0)
+    rescueReturnProgress: Number(document.body.dataset.rescueNpcReturnProgress ?? 0),
+    rescueRole: document.body.dataset.rescueNpcRole ?? 'stranded explorer'
   };
 }
 
@@ -111,7 +112,13 @@ function getNextLaunchCopy(state) {
   return launchText.match(/^(Launch|Fly)/i) ? launchText : 'Fly to the next planet';
 }
 
+function getRescueRole(state) {
+  return state.rescueRole || 'stranded explorer';
+}
+
 function getMissionCopy(state) {
+  const rescueRole = getRescueRole(state);
+
   if (state.status === 'Vortex reset' || state.throttle === 'Checkpoint') {
     return {
       title: 'Recover from the vortex',
@@ -143,7 +150,7 @@ function getMissionCopy(state) {
     if (state.rescueState === 'boarded') {
       return {
         title: 'Mission handoff complete',
-        objective: `Explorer secured. ${getNextLaunchCopy(state)} when ready.`,
+        objective: `${rescueRole} secured. ${getNextLaunchCopy(state)} when ready.`,
         badge: 'Next loop',
         step: 3
       };
@@ -152,7 +159,7 @@ function getMissionCopy(state) {
     if (state.rescueState === 'rescued') {
       return {
         title: 'Board the rocket',
-        objective: 'The explorer is safe. Board the rocket to lock in the rescue and continue the planet loop.',
+        objective: `The ${rescueRole.toLowerCase()} is safe. Board the rocket to lock in the rescue and continue the planet loop.`,
         badge: 'Board',
         step: 3
       };
@@ -160,8 +167,8 @@ function getMissionCopy(state) {
 
     if (state.rescueState === 'following') {
       return {
-        title: 'Explorer is with you',
-        objective: 'Return the explorer to the rocket. Full boarding animation comes later.',
+        title: `${rescueRole} is with you`,
+        objective: `Return the ${rescueRole.toLowerCase()} to the rocket. Full boarding animation comes later.`,
         badge: 'Escort',
         step: 3
       };
@@ -169,8 +176,8 @@ function getMissionCopy(state) {
 
     if (state.rescueState === 'visible') {
       return {
-        title: `SOS beacon on ${state.planet || 'the planet'}`,
-        objective: 'A stranded explorer is nearby. Exit the rocket and move toward the blinking SOS marker.',
+        title: `${rescueRole} needs help`,
+        objective: `An SOS beacon is active on ${state.planet || 'this planet'}. Exit the rocket and move toward the marker.`,
         badge: 'Rescue',
         step: 2
       };
@@ -206,7 +213,7 @@ function getMissionCopy(state) {
     if (state.rescueState === 'rescued') {
       return {
         title: 'Rescue complete',
-        objective: 'Great job. The explorer is safe. Move to the rocket and press E to board.',
+        objective: `Great job. The ${rescueRole.toLowerCase()} is safe. Move to the rocket and press E to board.`,
         badge: 'Complete',
         step: 3
       };
@@ -216,11 +223,11 @@ function getMissionCopy(state) {
       const returnHint = state.rescueReturnProgress > 75
         ? 'Almost back — keep moving left toward the rocket.'
         : state.rescueReturnProgress > 35
-          ? 'The explorer is following. Keep guiding them back to the ship.'
-          : 'Explorer found! Head left and escort them back to the rocket.';
+          ? `The ${rescueRole.toLowerCase()} is following. Keep guiding them back to the ship.`
+          : `${rescueRole} found! Head left and escort them back to the rocket.`;
 
       return {
-        title: 'Return to rocket with explorer',
+        title: `Return with ${rescueRole}`,
         objective: returnHint,
         badge: 'Escort',
         step: 3
@@ -229,13 +236,13 @@ function getMissionCopy(state) {
 
     if (state.rescueState === 'visible') {
       const distanceHint = state.rescueProgress > 65
-        ? 'Almost there — keep moving toward the SOS beacon.'
+        ? `Almost there — keep moving toward the ${rescueRole.toLowerCase()}.`
         : state.rescueProgress > 30
           ? 'Getting closer. Keep walking or jetpacking toward the marker.'
-          : 'Move right from the rocket and look for the blinking SOS beacon.';
+          : `Move right from the rocket and look for the ${rescueRole.toLowerCase()}'s SOS beacon.`;
 
       return {
-        title: 'Find the stranded explorer',
+        title: `Find the ${rescueRole.toLowerCase()}`,
         objective: distanceHint,
         badge: 'Rescue',
         step: 3
@@ -297,7 +304,12 @@ function observe(label) {
 const bodyObserver = new MutationObserver(renderMissionTracker);
 bodyObserver.observe(document.body, {
   attributes: true,
-  attributeFilter: ['data-rescue-npc-state', 'data-rescue-npc-progress', 'data-rescue-npc-return-progress']
+  attributeFilter: [
+    'data-rescue-npc-state',
+    'data-rescue-npc-progress',
+    'data-rescue-npc-return-progress',
+    'data-rescue-npc-role'
+  ]
 });
 
 renderMissionTracker();
