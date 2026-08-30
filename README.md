@@ -4,6 +4,16 @@ A small modern 3D browser demo inspired by a childhood QBasic exercise: draw a r
 
 Instead of recreating the old text-only look, this project keeps the same teaching concept and upgrades the presentation with a 3D rocket, animated launch, flames, exhaust particles, lighting, a launch pad, and a star field.
 
+The current slice expands that idea into a tiny planet-exploration loop:
+
+1. launch the rocket;
+2. guide it with the mouse while it flies;
+3. land on an authored planet;
+4. exit as an astronaut;
+5. walk around the terrain;
+6. re-enter the rocket;
+7. fly to another planet and repeat.
+
 ## Framework choice
 
 This project uses **Vite + Three.js**.
@@ -43,6 +53,20 @@ npm install
 npm run dev
 ```
 
+## Controls
+
+Rocket mode:
+
+- **Launch button** or **Space**: launch toward the selected planet.
+- **Mouse movement**: guide the rocket smoothly during the flight phase.
+- **Choose next planet** or **N**: cycle the destination while landed or before launch.
+
+Astronaut mode:
+
+- **Exit Rocket** or **E**: step out after landing.
+- **A/D** or **Left/Right arrows**: walk around the planet terrain.
+- Return near the rocket and press **E** or use **Enter Rocket** to climb back in.
+
 ## Production build check
 
 ```bash
@@ -63,9 +87,10 @@ The original QBasic idea was essentially:
 The modern version maps that same loop to a browser animation frame:
 
 1. calculate launch progress,
-2. move the 3D rocket upward,
+2. move the 3D rocket upward and across space,
 3. update flame and exhaust particles,
-4. update the camera and HUD,
-5. render the next frame.
+4. land on a planet,
+5. switch control from rocket to astronaut,
+6. render the next frame.
 
 That makes it a nice example of how the core idea of programming has not changed much, even though the tools and visuals are dramatically better.
