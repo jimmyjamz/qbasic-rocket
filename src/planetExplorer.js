@@ -16,7 +16,7 @@ const START_Y = -2.7;
 const SPACE_Y = 7.8;
 const LAND_Y = -1.25;
 const ASTRONAUT_GROUND_Y = LAND_Y + 0.82;
-const ASTRONAUT_MAX_Y = LAND_Y + 3.15;
+const ASTRONAUT_MAX_Y = LAND_Y + 5.35;
 const LAUNCH_TIME_MS = 7200;
 const STEERING_LIMIT_X = 4.8;
 const STEERING_LIMIT_Z = 1.45;
@@ -1128,7 +1128,7 @@ function throttleCurve(progress) {
 function updateCamera(dt) {
   const followObject = flightMode === 'walking' ? astronaut : rocket;
   const desiredX = THREE.MathUtils.clamp(followObject.position.x * 0.35, -1.8, 1.8);
-  const desiredY = THREE.MathUtils.clamp(followObject.position.y + 2.35, 1.8, 9.5);
+  const desiredY = THREE.MathUtils.clamp(followObject.position.y + 2.35, 1.8, 11.5);
   const cameraAlpha = 1 - Math.exp(-2.4 * dt);
 
   camera.position.x = THREE.MathUtils.lerp(camera.position.x, desiredX, cameraAlpha);
