@@ -65,8 +65,9 @@ Astronaut mode:
 
 - **Exit Rocket** or **E**: step out after landing.
 - **A/D** or **Left/Right arrows**: walk around the planet terrain.
-- **Hold Space**: fire the jetpack, lift off the terrain, and drift with gravity.
-- Return near the rocket and press **E** or use **Enter Rocket** to climb back in.
+- Hold **Space**: fire the jetpack, lift off the ground, and show animated backpack flames plus exhaust puffs/clouds.
+- Release **Space**: coast and descend back toward the terrain.
+- Return near the rocket, land, and press **E** or use **Enter Rocket** to climb back in.
 
 ## Production build check
 
@@ -89,10 +90,10 @@ The modern version maps that same loop to a browser animation frame:
 
 1. calculate launch progress,
 2. move the 3D rocket upward and across space,
-3. update flame and exhaust particles,
+3. update rocket flame and exhaust particles,
 4. land on a planet,
 5. switch control from rocket to astronaut,
-6. apply jetpack thrust and gravity when Space is held,
+6. apply walking, jetpack thrust, gravity, animated backpack flames, and exhaust puffs,
 7. render the next frame.
 
 That makes it a nice example of how the core idea of programming has not changed much, even though the tools and visuals are dramatically better.
