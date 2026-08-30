@@ -5,4 +5,6 @@ import './rescueNpcPresentation.js';
 import './rescueCompletionPresentation.js';
 import './rescuePassengerPresentation.js';
 import './sessionRewardsPresentation.js';
+import './missionSummaryPresentation.js';
+import './rescueDebugPresentation.js';
 import './missionTrackerPresentation.js';
