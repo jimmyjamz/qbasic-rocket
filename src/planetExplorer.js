@@ -27,6 +27,7 @@ const JETPACK_THRUST = 12.4;
 const MAX_FALL_SPEED = -5.4;
 const MAX_RISE_SPEED = 4.2;
 const SPECTATOR_AIRBORNE_PROGRESS = 0.17;
+const SCENE_SWAP_PROGRESS = 0.5;
 
 const PLANETS = [
   {
@@ -135,6 +136,7 @@ let astronautVelocityY = 0;
 let jetpackActive = false;
 let lastLandedX = 0;
 let hasLeftLaunchpad = false;
+let hasSwappedDestinationScene = false;
 
 launchButton.addEventListener('click', launchToSelectedPlanet);
 actionButton.addEventListener('click', handleContextAction);
@@ -168,6 +170,7 @@ function animate(now) {
 
   if (flightMode === 'launching') {
     updateRocketFlight(dt, now, progress);
+    swapDestinationSceneAtApex(progress);
 
     const altitude = Math.round(easeOutCubic(progress) * 112000);
     const throttleText = progress < 0.13 ? 'Ignition' : progress < 0.66 ? 'Full burn' : 'Landing burn';
@@ -211,6 +214,7 @@ function launchToSelectedPlanet() {
 
   astronaut.visible = false;
   jetpackActive = false;
+  hasSwappedDestinationScene = false;
   flightMode = 'launching';
   launchStart = performance.now();
   launchButton.disabled = true;
@@ -264,8 +268,8 @@ function enterRocket() {
 }
 
 function completeLanding() {
+  const planet = PLANETS[targetPlanetIndex];
   currentPlanetIndex = targetPlanetIndex;
-  const planet = PLANETS[currentPlanetIndex];
 
   flightMode = 'landed';
   launchStart = null;
@@ -276,8 +280,11 @@ function completeLanding() {
   launchSpectators.visible = false;
   hasLeftLaunchpad = true;
 
-  rebuildPlanetSurface(planet);
-  setPlanetAtmosphere(planet);
+  if (!hasSwappedDestinationScene) {
+    rebuildPlanetSurface(planet);
+    setPlanetAtmosphere(planet);
+    hasSwappedDestinationScene = true;
+  }
 
   launchButton.disabled = false;
   actionButton.disabled = false;
@@ -285,6 +292,22 @@ function completeLanding() {
   launchButton.textContent = 'Fly to next planet';
   updateHud(112000, 'Landed', 'Landed');
   updateUi();
+}
+
+function swapDestinationSceneAtApex(progress) {
+  if (hasSwappedDestinationScene || flightMode !== 'launching' || progress < SCENE_SWAP_PROGRESS) {
+    return;
+  }
+
+  const destination = PLANETS[targetPlanetIndex];
+  hasSwappedDestinationScene = true;
+  hasLeftLaunchpad = true;
+  launchPad.visible = false;
+  launchSpectators.visible = false;
+  rebuildPlanetSurface(destination);
+  setPlanetAtmosphere(destination);
+  planetLabel.textContent = destination.name;
+  loopStatusLabel.textContent = 'Destination approach';
 }
 
 function updateRocketFlight(dt, now, progress) {
@@ -1142,9 +1165,11 @@ function updateUi() {
     helpLabel.textContent = `Target: ${target.name} — ${target.tagline}. The station crew is watching. Move the mouse during flight to guide the rocket.`;
   } else if (flightMode === 'launching') {
     actionButton.disabled = true;
-    helpLabel.textContent = hasLeftLaunchpad
-      ? 'Mouse guides the rocket during flight; landing autopilot takes over near the planet.'
-      : 'The launch crew waves during ignition. They clear out once the rocket is airborne.';
+    helpLabel.textContent = hasSwappedDestinationScene
+      ? `Destination approach: ${target.name} is loaded for landing.`
+      : hasLeftLaunchpad
+        ? 'Mouse guides the rocket through space. The destination scene will appear near the flight apex.'
+        : 'The launch crew waves during ignition. They clear out once the rocket is airborne.';
   } else if (flightMode === 'landed') {
     launchButton.disabled = false;
     actionButton.disabled = false;
@@ -1169,6 +1194,7 @@ function resetExperience() {
   astronautVelocityY = 0;
   jetpackActive = false;
   hasLeftLaunchpad = false;
+  hasSwappedDestinationScene = false;
 
   rocket.position.set(0, START_Y, 0);
   rocket.rotation.set(0, 0, 0);
