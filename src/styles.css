@@ -31,14 +31,20 @@ button {
   transition: transform 180ms ease, box-shadow 180ms ease, filter 180ms ease;
 }
 
-button:hover {
+button:hover:not(:disabled) {
   transform: translateY(-1px);
   filter: brightness(1.06);
   box-shadow: 0 20px 44px rgba(255, 138, 61, 0.34);
 }
 
-button:active {
+button:active:not(:disabled) {
   transform: translateY(1px) scale(0.99);
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+  box-shadow: none;
 }
 
 button.secondary {
@@ -68,7 +74,7 @@ button.secondary {
   position: fixed;
   inset: 0;
   display: grid;
-  grid-template-columns: minmax(280px, 430px) minmax(220px, 330px);
+  grid-template-columns: minmax(280px, 460px) minmax(220px, 350px);
   grid-template-rows: auto 1fr;
   align-items: start;
   justify-content: space-between;
@@ -92,7 +98,7 @@ button.secondary {
 
 .hero-card {
   grid-column: 1;
-  max-width: 430px;
+  max-width: 460px;
 }
 
 .eyebrow,
@@ -107,7 +113,7 @@ button.secondary {
 
 h1 {
   margin: 0.3rem 0 0.75rem;
-  font-size: clamp(2.25rem, 6vw, 5rem);
+  font-size: clamp(2.2rem, 5.6vw, 4.8rem);
   line-height: 0.9;
   letter-spacing: -0.07em;
 }
@@ -124,12 +130,18 @@ p {
   margin-top: 1.2rem;
 }
 
+.help-text {
+  margin: 1rem 0 0;
+  color: rgba(248, 251, 255, 0.72);
+  font-size: 0.92rem;
+}
+
 .stats-card {
   grid-column: 2;
   display: grid;
   gap: 0.9rem;
   justify-self: end;
-  min-width: min(330px, 100%);
+  min-width: min(350px, 100%);
 }
 
 .stats-card > div {
@@ -141,6 +153,7 @@ p {
 
 .stats-card strong {
   font-size: 1.15rem;
+  text-align: right;
 }
 
 .code-card {
@@ -149,7 +162,7 @@ p {
   justify-self: start;
   margin: 0;
   padding: 1rem;
-  width: min(430px, 100%);
+  width: min(460px, 100%);
   color: #b6ffc8;
   font-family: "Cascadia Code", "Fira Code", Consolas, monospace;
   font-size: clamp(0.72rem, 1.6vw, 0.92rem);
@@ -158,7 +171,7 @@ p {
   overflow: auto;
 }
 
-@media (max-width: 860px) {
+@media (max-width: 980px) {
   body {
     overflow: auto;
   }
