@@ -233,12 +233,8 @@ function animate(now) {
 function launchToSelectedPlanet() {
   if (flightMode === 'walking' || flightMode === 'countdown') return;
 
-  if (flightMode === 'landed') {
-    targetPlanetIndex = (currentPlanetIndex + 1) % PLANETS.length;
-  }
-
-  if (targetPlanetIndex === currentPlanetIndex && flightMode !== 'ready') {
-    targetPlanetIndex = (currentPlanetIndex + 1) % PLANETS.length;
+  if (flightMode !== 'ready' && targetPlanetIndex === currentPlanetIndex) {
+    targetPlanetIndex = getNextPlanetIndex(currentPlanetIndex);
   }
 
   if (LAUNCH_COUNTDOWN_ENABLED) {
@@ -311,11 +307,15 @@ function resetLaunchCountdownState() {
   pendingLaunchTargetIndex = null;
 }
 
+function getNextPlanetIndex(fromIndex) {
+  return (fromIndex + 1) % PLANETS.length;
+}
+
 function chooseNextPlanet() {
   if (flightMode === 'launching' || flightMode === 'countdown' || flightMode === 'walking') return;
   targetPlanetIndex = (targetPlanetIndex + 1) % PLANETS.length;
   if (targetPlanetIndex === currentPlanetIndex) {
-    targetPlanetIndex = (targetPlanetIndex + 1) % PLANETS.length;
+    targetPlanetIndex = getNextPlanetIndex(targetPlanetIndex);
   }
   updateUi();
 }
@@ -360,6 +360,7 @@ function enterRocket() {
 function completeLanding() {
   const planet = PLANETS[targetPlanetIndex];
   currentPlanetIndex = targetPlanetIndex;
+  targetPlanetIndex = getNextPlanetIndex(currentPlanetIndex);
 
   resetBlackHoleState();
   resetLaunchCountdownState();
@@ -1440,9 +1441,9 @@ function updateUi() {
     launchButton.disabled = false;
     actionButton.disabled = false;
     nextButton.disabled = false;
-    launchButton.textContent = `Fly to ${PLANETS[(currentPlanetIndex + 1) % PLANETS.length].name}`;
+    launchButton.textContent = `Fly to ${target.name}`;
     actionButton.textContent = 'Exit rocket (E)';
-    helpLabel.textContent = `Landed on ${current.name}: ${current.tagline}. Press E to step out.`;
+    helpLabel.textContent = `Landed on ${current.name}: ${current.tagline}. Press E to step out or fly to ${target.name}.`;
   } else if (flightMode === 'walking') {
     launchButton.disabled = true;
     nextButton.disabled = true;
