@@ -99,7 +99,9 @@ function readUiState() {
     status: loopStatusLabel?.textContent?.trim() ?? '',
     launchAction: launchButton?.textContent?.trim() ?? '',
     contextAction: actionButton?.textContent?.trim() ?? '',
-    help: helpLabel?.textContent?.trim() ?? ''
+    help: helpLabel?.textContent?.trim() ?? '',
+    rescueState: document.body.dataset.rescueNpcState ?? 'hidden',
+    rescueProgress: Number(document.body.dataset.rescueNpcProgress ?? 0)
   };
 }
 
@@ -132,6 +134,24 @@ function getMissionCopy(state) {
   }
 
   if (state.mode === 'Landed') {
+    if (state.rescueState === 'located') {
+      return {
+        title: 'Explorer located',
+        objective: 'The stranded explorer is marked. Exit the rocket or prepare to return once rescue mechanics are added.',
+        badge: 'Found',
+        step: 2
+      };
+    }
+
+    if (state.rescueState === 'visible') {
+      return {
+        title: `SOS beacon on ${state.planet || 'the planet'}`,
+        objective: 'A stranded explorer is nearby. Exit the rocket and move toward the blinking SOS marker.',
+        badge: 'Rescue',
+        step: 2
+      };
+    }
+
     return {
       title: `Explore ${state.planet || 'the planet'}`,
       objective: 'Exit the rocket, test the suit, and scout the landing zone for future missions.',
@@ -155,6 +175,30 @@ function getMissionCopy(state) {
         title: 'Black-hole event',
         objective: 'The astronaut is being pulled into a vortex. Checkpoint reset incoming.',
         badge: 'Vortex',
+        step: 3
+      };
+    }
+
+    if (state.rescueState === 'located') {
+      return {
+        title: 'Stranded explorer found',
+        objective: 'Nice rescue scout! Return to the rocket. Follow/carry rescue mechanics come in a later slice.',
+        badge: 'Found',
+        step: 3
+      };
+    }
+
+    if (state.rescueState === 'visible') {
+      const distanceHint = state.rescueProgress > 65
+        ? 'Almost there — keep moving toward the SOS beacon.'
+        : state.rescueProgress > 30
+          ? 'Getting closer. Keep walking or jetpacking toward the marker.'
+          : 'Move right from the rocket and look for the blinking SOS beacon.';
+
+      return {
+        title: 'Find the stranded explorer',
+        objective: distanceHint,
+        badge: 'Rescue',
         step: 3
       };
     }
@@ -210,4 +254,11 @@ function observe(label) {
 }
 
 [modeLabel, planetLabel, throttleLabel, loopStatusLabel, launchButton, actionButton, helpLabel].forEach(observe);
+
+const bodyObserver = new MutationObserver(renderMissionTracker);
+bodyObserver.observe(document.body, {
+  attributes: true,
+  attributeFilter: ['data-rescue-npc-state', 'data-rescue-npc-progress']
+});
+
 renderMissionTracker();
