@@ -26,6 +26,7 @@ const GRAVITY = -7.2;
 const JETPACK_THRUST = 12.4;
 const MAX_FALL_SPEED = -5.4;
 const MAX_RISE_SPEED = 4.2;
+const SPECTATOR_AIRBORNE_PROGRESS = 0.17;
 
 const PLANETS = [
   {
@@ -96,6 +97,9 @@ scene.add(astronaut);
 const launchPad = createLaunchPad();
 scene.add(launchPad);
 
+const launchSpectators = createLaunchSpectators();
+scene.add(launchSpectators);
+
 const planetSurface = new THREE.Group();
 scene.add(planetSurface);
 
@@ -119,7 +123,6 @@ const pointer = {
   hasInput: false
 };
 const steeringTarget = new THREE.Vector3(0, START_Y, 0);
-
 const keys = new Set();
 
 let currentPlanetIndex = 0;
@@ -131,6 +134,7 @@ let astronautVelocityX = 0;
 let astronautVelocityY = 0;
 let jetpackActive = false;
 let lastLandedX = 0;
+let hasLeftLaunchpad = false;
 
 launchButton.addEventListener('click', launchToSelectedPlanet);
 actionButton.addEventListener('click', handleContextAction);
@@ -182,6 +186,7 @@ function animate(now) {
   animateJetpackFlames(now, jetpackActive);
   updateTrail(dt, throttle);
   updateJetpackExhaust(dt, now, jetpackActive);
+  updateLaunchSpectators(now, dt, progress);
   updateCamera(dt);
   updateDestinationOrbs(now, dt);
   updatePlanetSurface(now, dt);
@@ -212,7 +217,7 @@ function launchToSelectedPlanet() {
   actionButton.disabled = true;
   nextButton.disabled = true;
   launchButton.textContent = `Flying to ${PLANETS[targetPlanetIndex].name}...`;
-  launchPad.visible = currentPlanetIndex === 0 && rocket.position.y <= START_Y + 0.4;
+  launchPad.visible = !hasLeftLaunchpad && rocket.position.y <= START_Y + 0.4;
   updateHud(0, 'Ignition', 'Mouse guided flight');
   updateUi();
 }
@@ -268,6 +273,8 @@ function completeLanding() {
   rocket.rotation.set(0, 0, 0);
   flameLight.intensity = 0;
   launchPad.visible = false;
+  launchSpectators.visible = false;
+  hasLeftLaunchpad = true;
 
   rebuildPlanetSurface(planet);
   setPlanetAtmosphere(planet);
@@ -744,6 +751,116 @@ function createLaunchPad() {
   return group;
 }
 
+function createLaunchSpectators() {
+  const group = new THREE.Group();
+  group.name = 'launchSpectators';
+
+  const placements = [
+    [-3.15, -2.54, 0.58, 0.72, 0x6ee7ff],
+    [-2.45, -2.53, 0.92, 0.65, 0xffd166],
+    [-1.85, -2.56, 1.25, 0.7, 0xff7aa2],
+    [1.85, -2.56, 1.2, 0.68, 0x9bff8a],
+    [2.48, -2.53, 0.86, 0.74, 0xb69cff],
+    [3.16, -2.55, 0.5, 0.66, 0xff9f5a]
+  ];
+
+  placements.forEach(([x, y, z, scale, accent], index) => {
+    const spectator = createSpectator(accent, index);
+    spectator.position.set(x, y, z);
+    spectator.scale.setScalar(scale);
+    spectator.userData.baseY = y;
+    spectator.userData.phase = index * 0.9;
+    group.add(spectator);
+  });
+
+  return group;
+}
+
+function createSpectator(accent, index) {
+  const group = new THREE.Group();
+  const suit = new THREE.MeshStandardMaterial({ color: 0xf5fbff, roughness: 0.42, metalness: 0.05 });
+  const trim = new THREE.MeshStandardMaterial({ color: accent, roughness: 0.36, metalness: 0.12 });
+  const dark = new THREE.MeshStandardMaterial({ color: 0x23324d, roughness: 0.48, metalness: 0.08 });
+  const visor = new THREE.MeshPhysicalMaterial({
+    color: 0x66d8ff,
+    emissive: 0x14304a,
+    roughness: 0.08,
+    transmission: 0.12,
+    thickness: 0.14
+  });
+
+  const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.14, 0.28, 6, 12), suit);
+  body.position.y = 0.34;
+  group.add(body);
+
+  const helmet = new THREE.Mesh(new THREE.SphereGeometry(0.17, 18, 12), suit);
+  helmet.position.y = 0.72;
+  group.add(helmet);
+
+  const face = new THREE.Mesh(new THREE.SphereGeometry(0.115, 16, 8), visor);
+  face.position.set(0, 0.72, 0.12);
+  face.scale.set(1, 0.58, 0.3);
+  group.add(face);
+
+  const belt = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.045, 16), trim);
+  belt.position.y = 0.29;
+  group.add(belt);
+
+  for (const side of [-1, 1]) {
+    const arm = new THREE.Group();
+    arm.name = side < 0 ? 'leftWaveArm' : 'rightWaveArm';
+    arm.position.set(side * 0.17, 0.48, 0.03);
+    arm.rotation.z = side * (index % 2 === 0 ? 0.7 : 0.38);
+
+    const sleeve = new THREE.Mesh(new THREE.CapsuleGeometry(0.036, 0.24, 5, 8), suit);
+    sleeve.position.y = -0.11;
+    arm.add(sleeve);
+
+    const glove = new THREE.Mesh(new THREE.SphereGeometry(0.045, 10, 8), dark);
+    glove.position.y = -0.25;
+    arm.add(glove);
+    group.add(arm);
+  }
+
+  for (const x of [-0.08, 0.08]) {
+    const leg = new THREE.Mesh(new THREE.CapsuleGeometry(0.04, 0.18, 5, 8), dark);
+    leg.position.set(x, 0.07, 0);
+    group.add(leg);
+  }
+
+  group.rotation.y = index < 3 ? 0.22 : -0.22;
+  return group;
+}
+
+function updateLaunchSpectators(now, dt, launchProgress) {
+  if (hasLeftLaunchpad) {
+    launchSpectators.visible = false;
+    return;
+  }
+
+  if (flightMode === 'launching' && launchProgress >= SPECTATOR_AIRBORNE_PROGRESS) {
+    hasLeftLaunchpad = true;
+    launchSpectators.visible = false;
+    return;
+  }
+
+  const shouldShow = flightMode === 'ready' || flightMode === 'launching';
+  launchSpectators.visible = shouldShow;
+  if (!shouldShow) return;
+
+  launchSpectators.children.forEach((spectator) => {
+    const phase = spectator.userData.phase;
+    spectator.position.y = spectator.userData.baseY + Math.sin(now * 0.006 + phase) * 0.035;
+    spectator.rotation.z = Math.sin(now * 0.004 + phase) * 0.045;
+
+    const leftArm = spectator.getObjectByName('leftWaveArm');
+    const rightArm = spectator.getObjectByName('rightWaveArm');
+    const wave = Math.sin(now * 0.012 + phase) * 0.34;
+    if (leftArm) leftArm.rotation.z = THREE.MathUtils.lerp(leftArm.rotation.z, -0.55 - wave, 1 - Math.exp(-8 * dt));
+    if (rightArm) rightArm.rotation.z = THREE.MathUtils.lerp(rightArm.rotation.z, 0.55 + wave, 1 - Math.exp(-8 * dt));
+  });
+}
+
 function createDestinationOrbs() {
   const group = new THREE.Group();
   PLANETS.forEach((planet, index) => {
@@ -1022,10 +1139,12 @@ function updateUi() {
     nextButton.disabled = false;
     launchButton.textContent = `Launch to ${target.name}`;
     actionButton.textContent = 'Exit after landing';
-    helpLabel.textContent = `Target: ${target.name} — ${target.tagline}. Move the mouse during flight to guide the rocket.`;
+    helpLabel.textContent = `Target: ${target.name} — ${target.tagline}. The station crew is watching. Move the mouse during flight to guide the rocket.`;
   } else if (flightMode === 'launching') {
     actionButton.disabled = true;
-    helpLabel.textContent = 'Mouse guides the rocket during flight; landing autopilot takes over near the planet.';
+    helpLabel.textContent = hasLeftLaunchpad
+      ? 'Mouse guides the rocket during flight; landing autopilot takes over near the planet.'
+      : 'The launch crew waves during ignition. They clear out once the rocket is airborne.';
   } else if (flightMode === 'landed') {
     launchButton.disabled = false;
     actionButton.disabled = false;
@@ -1049,6 +1168,7 @@ function resetExperience() {
   astronautVelocityX = 0;
   astronautVelocityY = 0;
   jetpackActive = false;
+  hasLeftLaunchpad = false;
 
   rocket.position.set(0, START_Y, 0);
   rocket.rotation.set(0, 0, 0);
@@ -1057,6 +1177,7 @@ function resetExperience() {
   astronaut.rotation.set(0, 0, 0);
   planetSurface.visible = false;
   launchPad.visible = true;
+  launchSpectators.visible = true;
   flameLight.intensity = 0;
   steeringTarget.set(0, START_Y, 0);
   setPlanetAtmosphere(PLANETS[0]);
