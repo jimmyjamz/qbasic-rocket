@@ -1,6 +1,50 @@
 const modeLabel = document.querySelector('#modeName');
 const planetLabel = document.querySelector('#planetName');
 
+const RESCUE_PROFILES = {
+  'Sprout-9': {
+    role: 'Lost botanist',
+    emoji: '🧑‍🌾',
+    signal: 'SEED SOS',
+    found: 'Botanist found!',
+    following: 'Botanist following!',
+    safe: 'Botanist safe!',
+    landed: 'Lost botanist beacon detected',
+    eva: 'Lost botanist'
+  },
+  'Cinder Bean': {
+    role: 'Heat-shield mechanic',
+    emoji: '🧑‍🔧',
+    signal: 'HEAT SOS',
+    found: 'Mechanic found!',
+    following: 'Mechanic following!',
+    safe: 'Mechanic safe!',
+    landed: 'Heat-shield mechanic detected',
+    eva: 'Heat-shield mechanic'
+  },
+  'Frost Pea': {
+    role: 'Frozen explorer',
+    emoji: '🥶',
+    signal: 'ICE SOS',
+    found: 'Explorer thawed!',
+    following: 'Explorer following!',
+    safe: 'Explorer safe!',
+    landed: 'Frozen explorer beacon detected',
+    eva: 'Frozen explorer'
+  }
+};
+
+const DEFAULT_PROFILE = {
+  role: 'Stranded explorer',
+  emoji: '🧑‍🚀',
+  signal: 'SOS',
+  found: 'Explorer found!',
+  following: 'Following you!',
+  safe: 'Explorer safe!',
+  landed: 'SOS beacon detected',
+  eva: 'Stranded explorer'
+};
+
 const rescueState = {
   progress: 0,
   returnProgress: 0,
@@ -54,7 +98,7 @@ npcBubble.style.boxShadow = '0 0 24px rgba(104, 216, 255, 0.26), inset 0 0 20px 
 rescueOverlay.appendChild(npcBubble);
 
 const npcCharacter = document.createElement('div');
-npcCharacter.textContent = '🧑‍🚀';
+npcCharacter.textContent = DEFAULT_PROFILE.emoji;
 npcCharacter.style.fontSize = 'clamp(2.1rem, 5vw, 3.35rem)';
 npcCharacter.style.lineHeight = '1';
 npcCharacter.style.transformOrigin = '50% 80%';
@@ -77,9 +121,9 @@ followIndicator.style.lineHeight = '1.55rem';
 npcBubble.appendChild(followIndicator);
 
 const signal = document.createElement('div');
-signal.textContent = 'SOS';
+signal.textContent = DEFAULT_PROFILE.signal;
 signal.style.position = 'absolute';
-signal.style.right = '-0.55rem';
+signal.style.right = '-0.85rem';
 signal.style.top = '-0.25rem';
 signal.style.padding = '0.18rem 0.34rem';
 signal.style.borderRadius = '999px';
@@ -91,7 +135,7 @@ signal.style.letterSpacing = '0.06em';
 npcBubble.appendChild(signal);
 
 const npcLabel = document.createElement('div');
-npcLabel.textContent = 'Stranded explorer';
+npcLabel.textContent = DEFAULT_PROFILE.eva;
 npcLabel.style.marginTop = '0.45rem';
 npcLabel.style.padding = '0.34rem 0.58rem';
 npcLabel.style.borderRadius = '999px';
@@ -141,6 +185,18 @@ function getPlanet() {
   return planetLabel?.textContent?.trim() ?? '';
 }
 
+function getProfile(planet = getPlanet()) {
+  return RESCUE_PROFILES[planet] ?? DEFAULT_PROFILE;
+}
+
+function publishRescueProfile(planet = getPlanet()) {
+  const profile = getProfile(planet);
+  document.body.dataset.rescueNpcPlanet = planet;
+  document.body.dataset.rescueNpcRole = profile.role;
+  document.body.dataset.rescueNpcEmoji = profile.emoji;
+  return profile;
+}
+
 function isRescueVisibleMode(mode, planet) {
   return planet !== 'Launchpad' && (mode === 'Landed' || mode === 'Astronaut EVA');
 }
@@ -151,6 +207,7 @@ function resetRescueProgress() {
   rescueState.located = false;
   rescueState.rescued = false;
   rescueState.boarded = false;
+  publishRescueProfile();
   document.body.dataset.rescueNpcState = 'visible';
   document.body.dataset.rescueNpcProgress = '0';
   document.body.dataset.rescueNpcReturnProgress = '0';
@@ -173,6 +230,7 @@ function boardRescuedExplorer() {
   rescueState.located = true;
   rescueState.rescued = true;
   rescueState.boarded = true;
+  publishRescueProfile();
   document.body.dataset.rescueNpcState = 'boarded';
   document.body.dataset.rescueNpcProgress = '100';
   document.body.dataset.rescueNpcReturnProgress = '100';
@@ -246,6 +304,7 @@ function updateRescueBeacon() {
   const changedPlanet = rescueState.lastPlanet && planet !== rescueState.lastPlanet;
   const justLanded = rescueState.lastMode === 'In flight' && mode === 'Landed';
   const justBoardedAfterRescue = rescueState.lastMode === 'Astronaut EVA' && mode === 'Landed' && rescueState.rescued;
+  const profile = publishRescueProfile(planet);
 
   if (justBoardedAfterRescue) {
     boardRescuedExplorer();
@@ -288,21 +347,22 @@ function updateRescueBeacon() {
         ? 'rgba(121, 255, 178, 0.72)'
         : 'rgba(104, 216, 255, 0.55)';
     beaconPulse.style.opacity = rescued ? '1' : following ? '0.9' : '0.45';
+    npcCharacter.textContent = profile.emoji;
     npcCharacter.style.transform = `rotate(${Math.sin(now * 0.006) * (following || rescued ? 8 : 4)}deg)`;
     followIndicator.style.display = following || rescued ? 'block' : 'none';
-    signal.textContent = rescued ? 'SAFE' : following ? 'FOUND' : 'SOS';
+    signal.textContent = rescued ? 'SAFE' : following ? 'FOUND' : profile.signal;
     signal.style.background = rescued
       ? 'rgba(255, 177, 66, 0.94)'
       : following
         ? 'rgba(34, 197, 94, 0.92)'
         : 'rgba(255, 70, 88, 0.9)';
     npcLabel.textContent = rescued
-      ? 'Explorer safe! Board the rocket.'
+      ? `${profile.safe} Board the rocket.`
       : following
-        ? 'Following you!'
+        ? profile.following
         : mode === 'Landed'
-          ? 'SOS beacon detected'
-          : 'Stranded explorer';
+          ? profile.landed
+          : profile.eva;
     returnMeter.style.display = following || rescued ? 'block' : 'none';
     returnMeterFill.style.width = rescued ? '100%' : `${Math.round(rescueState.returnProgress)}%`;
     document.body.dataset.rescueNpcState = datasetState;
