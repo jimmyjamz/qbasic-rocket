@@ -1,3 +1,5 @@
+import { surfaceAdventure } from './surfaceAdventureState.js';
+
 const modeLabel = document.querySelector('#modeName');
 const planetLabel = document.querySelector('#planetName');
 
@@ -177,6 +179,7 @@ window.addEventListener('keydown', (event) => {
 window.addEventListener('keyup', (event) => {
   rescueState.keys.delete(event.code);
 });
+window.addEventListener('blur', () => rescueState.keys.clear());
 
 function getMode() {
   return modeLabel?.textContent?.trim() ?? '';
@@ -347,8 +350,17 @@ function updateRescueBeacon() {
     document.body.dataset.rescueNpcProgress = '100';
     document.body.dataset.rescueNpcReturnProgress = '100';
   } else {
-    updateFindProgress(mode);
-    updateReturnProgress(mode);
+    if (surfaceAdventure.enabled) {
+      const run = surfaceAdventure.run;
+      rescueState.progress = run.progress;
+      rescueState.returnProgress = run.returnProgress;
+      rescueState.located = run.state !== 'visible';
+      rescueState.rescued = run.state === 'rescued' || run.state === 'boarded';
+      rescueState.boarded = run.state === 'boarded';
+    } else {
+      updateFindProgress(mode);
+      updateReturnProgress(mode);
+    }
 
     const datasetState = getDatasetState();
     const following = datasetState === 'following';
@@ -392,6 +404,8 @@ function updateRescueBeacon() {
     document.body.dataset.rescueNpcState = datasetState;
     document.body.dataset.rescueNpcProgress = `${Math.round(rescueState.progress)}`;
     document.body.dataset.rescueNpcReturnProgress = `${Math.round(rescueState.returnProgress)}`;
+    // The surface level has a real world-space botanist; avoid a second floating NPC.
+    if (surfaceAdventure.enabled) renderHiddenOverlay();
   }
 
   rescueState.lastMode = mode;

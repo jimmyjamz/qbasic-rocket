@@ -26,7 +26,7 @@ Why this stack works well for the demo:
 
 ## Requirements
 
-- Node.js 20 or newer
+- Node.js 20.19+ or 22.12+ (tested with Node 24)
 - npm
 
 ## Run it from a fresh clone
@@ -68,6 +68,22 @@ Astronaut mode:
 - Hold **Space**: fire the jetpack, lift off the ground, and show animated backpack flames plus exhaust puffs/clouds.
 - Release **Space**: coast and descend back toward the terrain.
 - Return near the rocket, land, and press **E** or use **Enter Rocket** to climb back in.
+
+## Sprout-9 surface adventure (RKT-58)
+
+Exit on Sprout-9 to enter a short authored side-scrolling trail. Move right with
+A/D or arrows, hold Space to jetpack over the raised vine barrier, and reach the
+green-suited botanist at the SOS sign. Escort them left over the vines to the
+glowing rocket ring. Both characters must return to ground level near the rocket
+before E enables boarding. The botanist retraces your route, including jetpack
+movement. Flying too high still invokes the existing vortex checkpoint reset.
+
+This first slice applies only to Sprout-9. Cinder Bean and Frost Pea retain the
+accepted rescue baseline. Landing, flight, launch service, rewards, and the next
+destination flow remain shared. There is no new platformer engine or station hub.
+
+Run `npm ci`, `npm test`, and `npm run build` to reproduce validation.
+See [RKT-58 implementation and playtest notes](docs/RKT-58.md) for details.
 
 ## Debug configuration
 
