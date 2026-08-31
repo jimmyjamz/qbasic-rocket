@@ -225,6 +225,11 @@ function animate(now) {
   updateBlackHoleVortex(now, dt);
   updateLaunchSpectators(now, dt);
   updateCamera(dt);
+  if (surfaceAdventure.vortex.active) {
+    const projected = blackHole.position.clone().project(camera);
+    surfaceAdventure.vortex.x = (projected.x + 1) * window.innerWidth / 2;
+    surfaceAdventure.vortex.y = (1 - projected.y) * window.innerHeight / 2;
+  }
   updateDestinationOrbs(now, dt);
   updatePlanetSurface(now, dt);
 
@@ -618,6 +623,9 @@ function startBlackHoleSequence(now) {
   );
   blackHole.scale.setScalar(BLACK_HOLE_START_SCALE);
   blackHole.visible = true;
+  surfaceAdventure.vortex.active = true;
+  surfaceAdventure.vortex.progress = 0;
+  if (surfaceAdventure.active) surfaceView.startVortex();
   launchButton.disabled = true;
   actionButton.disabled = true;
   nextButton.disabled = true;
@@ -631,6 +639,8 @@ function updateBlackHoleSequence(dt, now) {
 
   const sequenceProgress = THREE.MathUtils.clamp((now - blackHoleSequenceStart) / BLACK_HOLE_SEQUENCE_MS, 0, 1);
   const eased = easeInOutCubic(sequenceProgress);
+  surfaceAdventure.vortex.progress = sequenceProgress;
+  if (surfaceAdventure.active) surfaceView.updateVortex(sequenceProgress, blackHole.position.clone().sub(surfaceView.group.position));
   const pullStrength = 0.035 + eased * 0.18;
   const spiralWobble = (1 - sequenceProgress) * 0.055;
 
@@ -695,6 +705,8 @@ function resetToLastCheckpoint() {
 }
 
 function resetBlackHoleState() {
+  surfaceAdventure.vortex.active = false;
+  surfaceAdventure.vortex.progress = 0;
   blackHoleDangerStart = null;
   blackHoleSequenceStart = null;
   isBlackHoleSequenceActive = false;
@@ -1508,7 +1520,7 @@ function updateUi() {
     launchButton.disabled = true;
     nextButton.disabled = true;
     helpLabel.textContent = surfaceAdventure.active
-      ? 'Sprout trail: A/D or arrows to walk. Hold Space to jetpack over the vines. Find the botanist to the right, then escort them left to the glowing rocket return ring (E). Flying too high still triggers the vortex.'
+      ? 'A/D: walk · Space: jetpack · E: board. Cross the vines → rescue → return left. Avoid flying too high.'
       : 'Walk with A/D or arrows. Hold Space for the jetpack. Stay too high for too long and the black hole resets you to the rocket.';
   }
 }

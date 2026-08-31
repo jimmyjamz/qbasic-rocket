@@ -10,7 +10,7 @@ body[data-surface-adventure="active"] .hero-card {
   position: fixed;
   left: 1rem;
   bottom: 1rem;
-  width: min(25rem, calc(100vw - 2rem));
+  width: min(20rem, calc(100vw - 2rem));
   box-sizing: border-box;
   padding: 0.8rem;
 }
@@ -23,6 +23,11 @@ body[data-surface-adventure="active"] :is(#launchButton, #nextButton) {
 body[data-surface-adventure="active"] .controls { margin-top: 0; }
 body[data-surface-adventure="active"] .controls button { padding: 0.5rem 0.75rem; font-size: 0.8rem; }
 body[data-surface-adventure="active"] .help-text { margin-top: 0.6rem; font-size: 0.78rem; }
+body[data-surface-adventure="active"] #missionTracker { width: min(20rem, calc(100vw - 2rem)) !important; padding: 0.6rem 0.75rem !important; }
+body[data-surface-adventure="active"] #missionTracker > div:last-child { display: none; }
+@media (max-width: 700px) {
+  body[data-surface-adventure="active"] #missionTracker { bottom: 9rem !important; right: 1rem !important; }
+}
 body[data-surface-adventure="active"] .stats-card { min-width: 0; gap: 0.5rem; padding: 0.8rem; }
 body[data-surface-adventure="active"] .stats-card > div:nth-child(3),
 body[data-surface-adventure="active"] .stats-card > div:nth-child(4) { display: none; }

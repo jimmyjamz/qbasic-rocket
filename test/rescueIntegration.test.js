@@ -119,7 +119,16 @@ test('full app: surface rescue, rewards, reboarding, planet service, other plane
     await advance(1);
     assert.equal(document.body.dataset.rescueNpcState, 'following');
     key('Space', true);
-    await advance(13);
+    for (let i = 0; i < 240 && !surfaceAdventure.vortex.active; i++) await advance(0.05);
+    assert.equal(surfaceAdventure.vortex.active, true);
+    const npc = scene.getObjectByName('surfaceRescueNpc');
+    const npcBefore = npc.position.clone();
+    await advance(1);
+    assert.ok(npc.position.distanceTo(npcBefore) > 0.1, 'NPC moves during vortex');
+    assert.ok(npc.scale.x < 0.85, 'NPC shrinks during vortex');
+    assert.equal(document.body.dataset.rescueNpcState, 'following');
+    assert.match(document.body.textContent, /Rescues: 2\s+•\s+Badges: 2/);
+    await advance(3);
     key('Space', false);
     assert.equal($('#modeName').textContent, 'Landed');
     assert.equal(surfaceAdventure.active, false);
@@ -129,6 +138,8 @@ test('full app: surface rescue, rewards, reboarding, planet service, other plane
     await advance(0.1);
     assert.equal(surfaceAdventure.active, true);
     assert.equal(surfaceAdventure.run.npc.x, 19);
+    assert.equal(npc.scale.x, 0.85);
+    assert.equal(npc.rotation.z, 0);
     $('#resetButton').click();
     await advance(0.1);
     assert.equal(surfaceAdventure.enabled, false);

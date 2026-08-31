@@ -54,20 +54,33 @@ export function createSurfaceAdventureView(createAstronaut) {
     group.add(sprite);
     return sprite;
   }
-  sign('ROCKET RETURN · E', 0, 3.6);
-  sign('VINES · HOLD SPACE + MOVE', 9, 2.6, 5);
-  const beacon = sign('BOTANIST · SOS', 19, 2.2, 3.5);
-  const portal = new THREE.Mesh(new THREE.TorusGeometry(0.8, 0.06, 8, 40), glow);
-  portal.position.set(0, 0.82, 0.45);
+  sign('ROCKET · E', 0, 3.25, 1.9);
+  sign('SPACE + MOVE', 9, 2.25, 2.2);
+  const beacon = sign('BOTANIST · SOS', 19, 1.7, 2);
+  const portal = new THREE.Mesh(new THREE.TorusGeometry(0.65, 0.025, 8, 40), glow);
+  portal.rotation.x = Math.PI / 2;
+  portal.position.set(0, 0.01, 0);
   group.add(portal);
   const npc = createAstronaut();
   npc.children[0].material = npc.children[0].material.clone();
   npc.children[0].material.color.setHex(0x83df9c);
   npc.scale.setScalar(0.85);
+  npc.name = "surfaceRescueNpc";
   group.add(npc);
+  let vortexStart = null;
   return {
     group,
+    startVortex() { vortexStart = npc.position.clone(); },
+    updateVortex(progress, target) {
+      if (!vortexStart || !npc.visible) return;
+      npc.position.lerpVectors(vortexStart, target, 1 - (1 - progress) ** 3);
+      npc.rotation.set(progress * 8, progress * 12, progress * 18);
+      npc.scale.setScalar(0.85 * (1 - progress * 0.95));
+    },
     update(run) {
+      vortexStart = null;
+      npc.scale.setScalar(0.85);
+      npc.rotation.set(0, 0, 0);
       npc.visible = run.state !== 'boarded';
       npc.position.set(run.npc.x, run.npc.y, 0.18);
       beacon.visible = run.state === 'visible';

@@ -60,4 +60,4 @@ export function createSurfaceRun() {
 }
 
 // Shared bridge to the existing rescue presentation; no DOM or Three.js dependency.
-export const surfaceAdventure = { enabled: false, active: false, run: createSurfaceRun() };
+export const surfaceAdventure = { enabled: false, active: false, run: createSurfaceRun(), vortex: { active: false, progress: 0, x: 0, y: 0 } };

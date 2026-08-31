@@ -7,6 +7,7 @@ const actionButton = document.querySelector('#actionButton');
 const helpLabel = document.querySelector('#helpText');
 
 const missionCard = document.createElement('aside');
+missionCard.id = 'missionTracker';
 missionCard.setAttribute('aria-live', 'polite');
 missionCard.style.position = 'fixed';
 missionCard.style.right = 'clamp(0.75rem, 2vw, 1.4rem)';
