@@ -143,7 +143,22 @@ test('full app: surface rescue, rewards, reboarding, planet service, other plane
     await advance(0.1);
     assert.equal($('#modeName').textContent, 'Landed');
     $('#stationReturnButton').click();
-    await advance(0.1);
+    await advance(1);
+    assert.equal($('#modeName').textContent, 'In flight');
+    assert.equal($('#stationHub').hidden, true);
+    assert.equal(document.body.dataset.rescueNpcState, 'boarded');
+    assert.equal(document.body.dataset.rescueNpcRole, 'Heat-shield mechanic');
+    const rocket = scene.children.find((child) => child.getObjectByName('flameGroup'));
+    const returnHeight = rocket.position.y;
+    assert.ok(returnHeight > -1.25, 'rocket rises away from the planet');
+    assert.ok([...document.querySelectorAll('div[aria-hidden="false"]')].some((el) => el.textContent.includes('Passenger aboard') && el.textContent.includes('Heat-shield mechanic')));
+    await advance(4);
+    assert.equal($('#planetName').textContent, 'Space Station');
+    assert.equal($('#stationHub').hidden, true);
+    assert.equal(document.body.dataset.rescueNpcRole, 'Heat-shield mechanic');
+    assert.equal(document.body.dataset.sessionBadges, '2');
+    assert.equal(crew.visible, true);
+    await advance(3);
     assert.equal($('#stationHub').hidden, false);
     assert.equal(crew.visible, true);
     assert.equal(document.body.dataset.rescueNpcState, 'hidden');
@@ -213,6 +228,35 @@ test('full app: surface rescue, rewards, reboarding, planet service, other plane
     assert.equal(document.body.dataset.rescueNpcState, 'hidden');
     assert.equal(scene.getObjectByName('monkeyPassenger').visible, false);
     assert.equal(scene.getObjectByName('sproutSurfaceAdventure').visible, false);
+    // Reset remains immediate during either half of a return, without delayed arrival.
+    for (const secondsBeforeReset of [1, 5]) {
+      $('#launchButton').click();
+      await advance(8);
+      $('#actionButton').click();
+      await move('KeyD', 5);
+      await move('KeyD', 1.3, true);
+      await move('KeyD', 3.7);
+      await advance(1);
+      await move('KeyA', 5);
+      await move('KeyA', 1.3, true);
+      await move('KeyA', 2.8);
+      await advance(1);
+      $('#actionButton').click();
+      await advance(0.1);
+      const earned = document.body.dataset.sessionBadges;
+      $('#stationReturnButton').click();
+      await advance(secondsBeforeReset);
+      assert.equal(document.body.dataset.stationReturn, 'flying');
+      $('#resetButton').click();
+      await advance(0.1);
+      assert.equal($('#stationHub').hidden, false);
+      assert.equal(document.body.dataset.stationReturn, 'idle');
+      assert.equal(document.body.dataset.rescueNpcState, 'hidden');
+      assert.equal(document.body.dataset.sessionBadges, earned);
+      await advance(8);
+      assert.equal($('#modeName').textContent, 'Rocket');
+      assert.equal(document.body.dataset.sessionBadges, earned);
+    }
   } finally {
     dom.window.close();
   }

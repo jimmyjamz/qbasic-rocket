@@ -149,6 +149,8 @@ const keys = new Set();
 let currentPlanetIndex = 0;
 let targetPlanetIndex = 0;
 let launchStart = null;
+let returningToStation = false;
+const returnOrigin = new THREE.Vector3();
 let countdownStart = null;
 let pendingLaunchTargetIndex = null;
 let flightMode = 'ready';
@@ -242,7 +244,7 @@ function animate(now) {
 }
 
 function launchToSelectedPlanet() {
-  if (flightMode === 'walking' || flightMode === 'countdown') return;
+  if (flightMode !== 'ready' && flightMode !== 'landed') return;
 
   if (flightMode !== 'ready' && targetPlanetIndex === currentPlanetIndex) {
     targetPlanetIndex = getNextPlanetIndex(currentPlanetIndex);
@@ -253,6 +255,15 @@ function launchToSelectedPlanet() {
     return;
   }
 
+  beginLaunchFlight();
+}
+
+export function returnToStation() {
+  if (flightMode !== 'landed' || launchButton.disabled || document.body.dataset.rescueNpcState !== 'boarded') return;
+  returningToStation = true;
+  document.body.dataset.stationReturn = 'flying';
+  returnOrigin.copy(rocket.position);
+  keys.clear();
   beginLaunchFlight();
 }
 
@@ -308,7 +319,7 @@ function beginLaunchFlight() {
   launchButton.disabled = true;
   actionButton.disabled = true;
   nextButton.disabled = true;
-  launchButton.textContent = `Flying to ${PLANETS[targetPlanetIndex].name}...`;
+  launchButton.textContent = `Flying to ${returningToStation ? 'Space Station' : PLANETS[targetPlanetIndex].name}...`;
   launchPad.visible = !hasLeftLaunchpad && rocket.position.y <= START_Y + 0.4;
   updateHud(0, 'Ignition', 'Mouse guided flight');
   updateUi();
@@ -380,6 +391,11 @@ function enterRocket() {
 }
 
 function completeLanding() {
+  if (returningToStation) {
+    // Run the established cleanup listeners only after touchdown, not at departure.
+    resetButton.click();
+    return;
+  }
   const planet = PLANETS[targetPlanetIndex];
   currentPlanetIndex = targetPlanetIndex;
   targetPlanetIndex = getNextPlanetIndex(currentPlanetIndex);
@@ -420,6 +436,15 @@ function swapDestinationSceneAtApex(progress) {
 
   const destination = PLANETS[targetPlanetIndex];
   hasSwappedDestinationScene = true;
+  if (returningToStation) {
+    planetSurface.visible = false;
+    launchPad.visible = true;
+    hasLeftLaunchpad = false;
+    setPlanetAtmosphere(PLANETS[0]);
+    planetLabel.textContent = 'Space Station';
+    loopStatusLabel.textContent = 'Station approach';
+    return;
+  }
   hasLeftLaunchpad = true;
   launchPad.visible = false;
   launchSpectators.visible = false;
@@ -431,12 +456,17 @@ function swapDestinationSceneAtApex(progress) {
 
 function updateRocketFlight(dt, now, progress) {
   const eased = easeInOutCubic(progress);
-  const arcY = bezier(START_Y, SPACE_Y, SPACE_Y - 0.6, LAND_Y, eased);
+  const arcY = bezier(returningToStation ? returnOrigin.y : START_Y, SPACE_Y, SPACE_Y - 0.6, returningToStation ? START_Y : LAND_Y, eased);
   const target = getSteeringTarget(arcY, progress);
+
+  if (returningToStation && progress < 0.2) {
+    target.x = THREE.MathUtils.lerp(returnOrigin.x, target.x, THREE.MathUtils.smoothstep(progress, 0, 0.2));
+  }
 
   if (progress > 0.72) {
     const landingProgress = THREE.MathUtils.smoothstep(progress, 0.72, 1);
-    target.x = THREE.MathUtils.lerp(target.x, lastLandedX, landingProgress);
+    target.x = THREE.MathUtils.lerp(target.x, returningToStation ? 0 : lastLandedX, landingProgress);
+    if (returningToStation) target.y = THREE.MathUtils.lerp(target.y, START_Y, landingProgress);
     target.z = THREE.MathUtils.lerp(target.z, 0, landingProgress);
   } else {
     lastLandedX = THREE.MathUtils.clamp(target.x, -2.2, 2.2);
@@ -1508,7 +1538,9 @@ function updateUi() {
     helpLabel.textContent = `Launch countdown armed for ${target.name}.`;
   } else if (flightMode === 'launching') {
     actionButton.disabled = true;
-    helpLabel.textContent = hasSwappedDestinationScene
+    helpLabel.textContent = returningToStation
+      ? 'Flying home with your rescued explorer. The station board opens after landing.'
+      : hasSwappedDestinationScene
       ? `Destination approach: ${target.name} is loaded for landing.`
       : hasLeftLaunchpad
         ? 'Mouse guides the rocket through space. The destination scene will appear near the flight apex.'
@@ -1532,6 +1564,8 @@ function updateUi() {
 }
 
 function resetExperience() {
+  returningToStation = false;
+  document.body.dataset.stationReturn = 'idle';
   leaveSurfaceAdventure();
   keys.clear();
   currentPlanetIndex = 0;

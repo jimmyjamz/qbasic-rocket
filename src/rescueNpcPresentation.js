@@ -324,6 +324,12 @@ function renderHiddenOverlay() {
 }
 
 function updateRescueBeacon() {
+  // A homebound passenger remains the same rescued explorer until touchdown.
+  if (document.body.dataset.stationReturn === 'flying') {
+    renderHiddenOverlay();
+    requestAnimationFrame(updateRescueBeacon);
+    return;
+  }
   if (!surfaceAdventure.vortex.active && vortexOverlayStart) {
     vortexOverlayStart = null;
     rescueOverlay.style.left = '';

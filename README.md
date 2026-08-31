@@ -92,10 +92,12 @@ See [RKT-58 polish, RKT-59 fix and RKT-60 validation](docs/RKT-60.md) for the la
 
 At the launchpad, the station board previews your selected rescue and shows this
 session's Space Hero badges. Choose a destination with the existing controls.
-After rescuing and boarding, **Return to station** brings you straight home while
+After rescuing and boarding, **Return to station** flies you home while
 keeping earned session rewards; direct planet-to-planet travel still works.
 The supply stop is a clearly labeled future placeholder. No items or purchases
 are available yet. See [hub validation notes](docs/RKT-55.md).
+The home board appears after station touchdown; **Reset** remains instant.
+See [animated return validation](docs/RKT-63.md).
 
 ## Debug configuration
 

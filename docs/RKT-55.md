@@ -1,5 +1,8 @@
 # RKT-55 — Space Station Hub Foundation
 
+Update: RKT-63 replaces the initial instant return below with an animated flight.
+See [RKT-63](RKT-63.md) for current return behavior and validation.
+
 The launchpad now has a compact home-base panel: mission board, selected planet,
 session rescue/Space Hero badge totals, and a clearly unavailable future supply
 stop. Existing Choose next planet and launch controls drive the board; no second

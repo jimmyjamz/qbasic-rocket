@@ -139,6 +139,9 @@ function getMissionCopy(state) {
   }
 
   if (state.mode === 'In flight') {
+    if (document.body.dataset.stationReturn === 'flying') {
+      return { title: 'Bring your explorer home', objective: 'Fly to the Space Station. Your earned badges are safe; the home board opens after landing.', badge: 'Homebound', step: 1 };
+    }
     return {
       title: 'Reach the destination planet',
       objective: 'Guide the rocket through space and stay ready for the landing burn.',

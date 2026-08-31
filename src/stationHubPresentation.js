@@ -1,4 +1,5 @@
 // A small home-base UI over the existing launchpad. No separate travel or reward state.
+import { returnToStation } from './planetExplorer.js';
 const hero = document.querySelector('.hero-card');
 const mode = document.querySelector('#modeName');
 const launch = document.querySelector('#launchButton');
@@ -36,9 +37,7 @@ function canReturn() {
   return mode.textContent === 'Landed' && document.body.dataset.rescueNpcState === 'boarded' && !launch.disabled;
 }
 returnButton.addEventListener('click', () => {
-  // Use the established station reset, including presentation cleanup listeners.
-  // Rewards intentionally persist for this browser session, just as with Reset.
-  if (canReturn()) document.querySelector('#resetButton').click();
+  if (canReturn()) returnToStation();
 });
 
 const missions = {
