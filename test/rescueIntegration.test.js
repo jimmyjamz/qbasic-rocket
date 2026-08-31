@@ -282,6 +282,49 @@ test('full app: surface rescue, rewards, reboarding, planet service, other plane
       assert.equal($('#modeName').textContent, 'Rocket');
       assert.equal(document.body.dataset.sessionBadges, earned);
     }
+    // Friendly first contact: retreat, station translator, return and resolve without RKT-56 reward.
+    for (let i = 0; i < 5 && !$('#launchButton').textContent.includes('Gherkin-7'); i++) $('#nextButton').click();
+    await advance(0.1);
+    assert.match($('#stationDestination').textContent, /Gherkin-7/);
+    $('#launchButton').click();
+    await advance(8);
+    assert.equal($('#planetName').textContent, 'Gherkin-7');
+    assert.equal(document.body.dataset.rescueNpcState, 'hidden');
+    $('#actionButton').click();
+    await advance(0.1);
+    assert.equal(document.body.dataset.firstContactState, 'blocked');
+    assert.equal($('#translateButton').hidden, true);
+    $('#actionButton').click();
+    await advance(0.1);
+    assert.equal(document.body.dataset.firstContactState, 'needs-translator');
+    assert.equal($('#stationReturnButton').hidden, false);
+    const rewardsBeforeContact = document.body.dataset.sessionBadges;
+    $('#stationReturnButton').click();
+    await advance(8);
+    assert.equal(document.body.dataset.firstContactState, 'at-supply');
+    assert.equal($('#translatorButton').hidden, false);
+    $('#translatorButton').click();
+    await advance(0.1);
+    assert.equal(document.body.dataset.translatorBadge, 'acquired');
+    assert.equal(document.body.dataset.firstContactState, 'translator-ready');
+    assert.equal($('#translatorButton').hidden, true);
+    for (let i = 0; i < 5 && !$('#launchButton').textContent.includes('Gherkin-7'); i++) $('#nextButton').click();
+    await advance(0.1);
+    $('#launchButton').click();
+    await advance(8);
+    assert.equal(document.body.dataset.firstContactState, 'return-landing');
+    $('#actionButton').click();
+    await advance(0.1);
+    assert.equal($('#translateButton').hidden, false);
+    $('#translateButton').click();
+    await advance(0.1);
+    assert.equal(document.body.dataset.firstContactState, 'resolved-eva');
+    assert.match($('#firstContactCard').textContent, /moon-pickle garden/);
+    $('#actionButton').click();
+    await advance(0.1);
+    assert.equal(document.body.dataset.firstContactState, 'complete');
+    assert.equal(document.body.dataset.sessionBadges, rewardsBeforeContact, 'RKT-56 reward is not granted by this slice');
+    assert.equal($('#stationReturnButton').hidden, false);
   } finally {
     dom.window.close();
   }

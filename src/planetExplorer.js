@@ -69,6 +69,15 @@ const PLANETS = [
     sky: 0x061022,
     fog: 0.034,
     props: 'ice'
+  },
+  {
+    name: 'Gherkin-7',
+    tagline: 'violet fields and a famous moon-pickle garden',
+    surface: 0x6250a5,
+    accent: 0xc8ff72,
+    sky: 0x120729,
+    fog: 0.029,
+    props: 'crystals'
   }
 ];
 
@@ -258,8 +267,8 @@ function launchToSelectedPlanet() {
   beginLaunchFlight();
 }
 
-export function returnToStation() {
-  if (flightMode !== 'landed' || launchButton.disabled || document.body.dataset.rescueNpcState !== 'boarded') return;
+export function returnToStation(contactReturn = false) {
+  if (flightMode !== 'landed' || launchButton.disabled || (!contactReturn && document.body.dataset.rescueNpcState !== 'boarded')) return;
   returningToStation = true;
   document.body.dataset.stationReturn = 'flying';
   returnOrigin.copy(rocket.position);

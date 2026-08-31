@@ -12,3 +12,4 @@ import './missionSummaryPresentation.js';
 import './rescueDebugPresentation.js';
 import './missionTrackerPresentation.js';
 import './stationHubPresentation.js';
+import './firstContactPresentation.js';
