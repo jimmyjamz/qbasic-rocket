@@ -1,8 +1,8 @@
+import './rocketMonkeyWorldGag.js';
 import './planetExplorer.js';
 import './countdownPresentation.js';
 import './launchCrewPresentation.js';
 import './planetLaunchServicePresentation.js';
-import './monkeyLaunchPresentation.js';
 import './rescueNpcPresentation.js';
 import './rescueCheckpointResetPresentation.js';
 import './rescueCompletionPresentation.js';
