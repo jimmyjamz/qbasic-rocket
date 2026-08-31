@@ -1,6 +1,7 @@
 const DEBUG_RESCUE_READOUT_ENABLED = true;
 
 const debugCard = document.createElement('div');
+debugCard.id = 'rescueDebug';
 debugCard.setAttribute('aria-live', 'polite');
 debugCard.setAttribute('aria-hidden', DEBUG_RESCUE_READOUT_ENABLED ? 'false' : 'true');
 debugCard.style.position = 'fixed';

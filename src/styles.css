@@ -5,6 +5,28 @@
   color: #f8fbff;
 }
 
+[hidden] { display: none !important; }
+body[data-station-hub="home"] .hero-card {
+  width: min(23rem, 100%);
+  margin-top: 3rem;
+  padding: 1rem;
+  max-height: calc(100dvh - 7rem);
+  overflow-y: auto;
+}
+body[data-station-hub="home"] .hero-card > .eyebrow,
+body[data-station-hub="home"] .hero-card > p:not(.help-text),
+body[data-station-hub="home"] :is(.code-card, #missionTracker, #actionButton, #rescueDebug) { display: none !important; }
+body[data-station-hub="home"] .hero-card h1 { font-size: 2.2rem; letter-spacing: -0.04em; }
+body[data-station-hub="home"] .hero-card .help-text { font-size: 0.75rem; }
+body[data-station-hub="home"] .controls { gap: 0.5rem; margin-top: 0.8rem; }
+body[data-station-hub="home"] .controls button { padding: 0.6rem 0.8rem; font-size: 0.8rem; }
+#stationHub section { padding: 0.7rem 0; border-top: 1px solid #ffffff24; }
+#stationHub h2 { margin: 0; font-size: 0.92rem; color: #9bd7ff; }
+#stationHub p { margin: 0.35rem 0; font-size: 0.85rem; line-height: 1.4; }
+#stationHub small, #stationHub h2 span { font-size: 0.7rem; color: #c0c8d8; }
+#stationHub h2 span { margin-left: 0.5rem; font-weight: normal; }
+#stationDestination { font-weight: 800; color: #ffe3a3; }
+
 /* Make room for the authored trail without changing the flight/station HUD. */
 body[data-surface-adventure="active"] .hero-card {
   position: fixed;
