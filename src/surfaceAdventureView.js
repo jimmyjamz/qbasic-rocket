@@ -3,10 +3,11 @@ import { SPROUT_LEVEL } from './surfaceAdventureState.js';
 
 export function createSurfaceAdventureView(createAstronaut, level = SPROUT_LEVEL) {
   const cinder = level.kind === 'steam';
+  const frost = level.kind === 'ice';
   const group = new THREE.Group();
-  group.name = cinder ? 'cinderSurfaceAdventure' : 'sproutSurfaceAdventure';
+  group.name = cinder ? 'cinderSurfaceAdventure' : frost ? 'frostSurfaceAdventure' : 'sproutSurfaceAdventure';
   group.visible = false;
-  const soil = new THREE.MeshStandardMaterial({ color: cinder ? 0x914b32 : 0x265b44, roughness: 0.85 });
+  const soil = new THREE.MeshStandardMaterial({ color: cinder ? 0x914b32 : frost ? 0xaeddf4 : 0x265b44, roughness: frost ? 0.3 : 0.85, metalness: frost ? 0.08 : 0 });
   const vine = new THREE.MeshStandardMaterial({ color: 0x64c779, roughness: 0.65 });
   const glow = new THREE.MeshStandardMaterial({ color: 0xb4ffc3, emissive: 0x48aa65, emissiveIntensity: 0.3 });
   const floor = new THREE.Mesh(new THREE.BoxGeometry(level.maxX - level.minX + 2, 0.6, 4.8), soil);
@@ -16,23 +17,23 @@ export function createSurfaceAdventureView(createAstronaut, level = SPROUT_LEVEL
   const barrier = new THREE.Mesh(new THREE.BoxGeometry(2, SPROUT_LEVEL.obstacleHeight, 1.4), vine);
   barrier.position.set(9, SPROUT_LEVEL.obstacleHeight / 2 - 0.06, 0);
   group.add(barrier);
-  barrier.visible = !cinder;
+  barrier.visible = !cinder && !frost;
   for (let i = 0; i < 7; i++) {
     const leaf = new THREE.Mesh(new THREE.SphereGeometry(0.3, 12, 8), glow);
     leaf.scale.set(1, 0.3, 0.6);
     leaf.rotation.z = i % 2 ? 0.35 : -0.35;
     leaf.position.set(8.15 + i * 0.28, 0.6 + (i % 3) * 0.3, 0.76);
-    if (!cinder) group.add(leaf);
+    if (!cinder && !frost) group.add(leaf);
   }
   // Fixed decorative seed groves behind the single traversable obstacle.
   for (const x of [3, 5, 12, 15, 21]) {
     const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.1, 1.6, 8), vine);
     stem.position.set(x, 0.7, -2);
-    if (!cinder) group.add(stem);
+    if (!cinder && !frost) group.add(stem);
     const seed = new THREE.Mesh(new THREE.IcosahedronGeometry(0.42, 1), cinder ? soil : glow);
     seed.position.set(x, cinder ? 0.4 : 1.6, -2);
     if (cinder) seed.scale.set(0.8, 2, 0.8);
-    group.add(seed);
+    if (!frost) group.add(seed);
   }
   function sign(text, x, y, width = 4) {
     const canvas = document.createElement('canvas');
@@ -58,7 +59,7 @@ export function createSurfaceAdventureView(createAstronaut, level = SPROUT_LEVEL
     return sprite;
   }
   sign('ROCKET · E', 0, 3.25, 1.9);
-  if (!cinder) sign('SPACE + MOVE', 9, 2.25, 2.2);
+  if (!cinder && !frost) sign('SPACE + MOVE', 9, 2.25, 2.2);
   const beacon = sign(level.npcLabel, level.targetX, 1.7, 2);
   const ventSigns = cinder ? [
     sign('WAIT · STEAM', 10, 2.1, 2.4),
@@ -78,13 +79,43 @@ export function createSurfaceAdventureView(createAstronaut, level = SPROUT_LEVEL
     }
     group.add(steam);
   }
+  const iceMaterial = new THREE.MeshStandardMaterial({ color: 0x8edcff, emissive: 0x22577a, emissiveIntensity: 0.18, transparent: true, opacity: 0.84, roughness: 0.22 });
+  const pickaxe = new THREE.Group();
+  const column = new THREE.Group();
+  let pickaxeSign = null;
+  let columnSign = null;
+  if (frost) {
+    pickaxeSign = sign('PICKAXE', 5, 2.2, 1.8);
+    columnSign = sign('BREAK ICE', 12, 3.8, 2.1);
+    const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.055, 1.2, 8), new THREE.MeshStandardMaterial({ color: 0x82502e }));
+    handle.rotation.z = -0.55;
+    const head = new THREE.Mesh(new THREE.BoxGeometry(0.75, 0.14, 0.16), new THREE.MeshStandardMaterial({ color: 0xd7edf7, metalness: 0.65, roughness: 0.25 }));
+    head.position.set(-0.32, 0.47, 0);
+    head.rotation.z = -0.55;
+    pickaxe.add(handle, head);
+    pickaxe.position.set(level.pickaxeX, 0.62, 0.35);
+    group.add(pickaxe);
+    for (let i = 0; i < 5; i++) {
+      const shard = new THREE.Mesh(new THREE.ConeGeometry(0.48 - i * 0.035, 2.6 + (i % 2) * 0.6, 7), iceMaterial.clone());
+      shard.position.set((level.obstacleLeft + level.obstacleRight) / 2 + (i - 2) * 0.22, 1.25, (i % 2) * 0.25);
+      shard.rotation.z = (i - 2) * 0.08;
+      column.add(shard);
+    }
+    group.add(column);
+    for (const x of [3, 7.5, 16, 19]) {
+      const crystal = new THREE.Mesh(new THREE.OctahedronGeometry(0.35, 0), iceMaterial);
+      crystal.scale.set(0.75, 2.1, 0.75);
+      crystal.position.set(x, 0.55, -2);
+      group.add(crystal);
+    }
+  }
   const portal = new THREE.Mesh(new THREE.TorusGeometry(0.65, 0.025, 8, 40), glow);
   portal.rotation.x = Math.PI / 2;
   portal.position.set(0, 0.01, 0);
   group.add(portal);
   const npc = createAstronaut();
   npc.children[0].material = npc.children[0].material.clone();
-  npc.children[0].material.color.setHex(cinder ? 0xffac55 : 0x83df9c);
+  npc.children[0].material.color.setHex(cinder ? 0xffac55 : frost ? 0xbdefff : 0x83df9c);
   npc.scale.setScalar(0.85);
   npc.name = "surfaceRescueNpc";
   group.add(npc);
@@ -107,6 +138,19 @@ export function createSurfaceAdventureView(createAstronaut, level = SPROUT_LEVEL
           puff.scale.setScalar(state.label.includes('WARMING') ? 0.3 : 1 + Math.sin(state.remaining * 6 + index) * 0.18);
           puff.position.y = 0.5 + index * 0.8 + (1 - state.remaining % 1) * 0.5;
         });
+      }
+      if (frost) {
+        pickaxe.visible = !run.columnBroken;
+        pickaxe.position.set(run.hasPickaxe ? run.player.x + 0.45 : level.pickaxeX, run.hasPickaxe ? run.player.y + 0.7 : 0.62, 0.35);
+        pickaxe.scale.setScalar(run.hasPickaxe ? 0.72 : 1);
+        column.visible = !run.columnBroken;
+        column.children.forEach((shard, index) => {
+          shard.rotation.z = (index - 2) * 0.08 + run.breakProgress * (index - 2) * 0.38;
+          shard.position.y = 1.25 - run.breakProgress * (0.55 + index * 0.05);
+          shard.scale.setScalar(1 - run.breakProgress * 0.55);
+        });
+        pickaxeSign.visible = !run.hasPickaxe;
+        columnSign.visible = run.hasPickaxe && !run.columnBroken;
       }
       vortexStart = null;
       npc.scale.setScalar(0.85);

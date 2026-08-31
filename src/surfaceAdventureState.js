@@ -9,6 +9,11 @@ export const CINDER_LEVEL = Object.freeze({
   minX: -2, maxX: 24, targetX: 21, obstacleLeft: 9, obstacleRight: 11,
   obstacleHeight: 0, radius: 0.24
 });
+export const FROST_LEVEL = Object.freeze({
+  kind: 'ice', name: 'Frost Pea', npcLabel: 'EXPLORER · FROZEN',
+  minX: -2, maxX: 24, targetX: 21, pickaxeX: 5, obstacleLeft: 11.4,
+  obstacleRight: 12.6, obstacleHeight: 3.2, radius: 0.24
+});
 
 export function steamPhase(clock) {
   const phase = clock % 11;
@@ -23,12 +28,17 @@ export function resolveSurfaceMovement(previous, proposed, level = SPROUT_LEVEL,
   const left = level.obstacleLeft - level.radius;
   const right = level.obstacleRight + level.radius;
   const overlaps = x > left && x < right;
+  if (level.kind === 'ice' && !ventSafe) {
+    if (previous.x <= left && x > left) x = left;
+    else if (previous.x >= right && x < right) x = right;
+    else if (overlaps) x = previous.x <= left ? left : right;
+  }
   if (level.kind === 'steam' && !ventSafe && overlaps) {
     if (previous.x <= left) x = left;
     else if (previous.x >= right) x = right;
     // An already admitted character may always leave; no damage or trapping.
   }
-  if (overlaps && y < level.obstacleHeight) {
+  if (overlaps && y < level.obstacleHeight && level.kind !== 'steam' && !(level.kind === 'ice' && ventSafe)) {
     if (previous.y >= level.obstacleHeight) y = level.obstacleHeight;
     else x = previous.x <= left ? left : right;
   }
@@ -39,8 +49,15 @@ export function createSurfaceRun(level = SPROUT_LEVEL) {
   let trail = [];
   let clock = 0;
   let ventClock = 0;
+  let hasPickaxe = false;
+  let columnBroken = false;
+  let breakProgress = 0;
   const run = {
     level,
+    get hasPickaxe() { return hasPickaxe; },
+    get columnBroken() { return columnBroken; },
+    get breakProgress() { return breakProgress; },
+    get objective() { return columnBroken ? 'RESCUE EXPLORER' : hasPickaxe ? 'BREAK ICE COLUMN' : 'FIND PICKAXE'; },
     get vent() { return steamPhase(ventClock); },
     tick(dt, player) {
       if (level.kind !== 'steam') return;
@@ -52,16 +69,30 @@ export function createSurfaceRun(level = SPROUT_LEVEL) {
       } else ventClock += dt;
     },
     state: 'visible', progress: 0, returnProgress: 0,
+    player: { x: 0, y: 0 },
     npc: { x: level.targetX, y: 0 },
     reset() {
       run.state = 'visible';
       run.progress = run.returnProgress = clock = 0;
       ventClock = 0;
       run.npc = { x: level.targetX, y: 0 };
+      run.player = { x: 0, y: 0 };
       trail = [];
+      hasPickaxe = false;
+      columnBroken = false;
+      breakProgress = 0;
     },
     update(dt, player) {
       clock += dt;
+      run.player = { x: player.x, y: player.y };
+      if (level.kind === 'ice') {
+        if (!hasPickaxe && Math.abs(player.x - level.pickaxeX) < 0.7 && player.y < 0.75) hasPickaxe = true;
+        const atColumn = player.x >= level.obstacleLeft - level.radius - 0.35 && player.x <= level.obstacleRight + level.radius + 0.35 && player.y < 0.75;
+        if (hasPickaxe && !columnBroken && atColumn) {
+          breakProgress = Math.min(1, breakProgress + dt / 0.65);
+          if (breakProgress >= 1) columnBroken = true;
+        }
+      }
       if (run.state === 'visible') {
         run.progress = Math.max(0, Math.min(99, player.x / level.targetX * 100));
         if (Math.abs(player.x - run.npc.x) < 0.85 && Math.abs(player.y) < 0.75) {

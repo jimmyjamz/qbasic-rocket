@@ -81,7 +81,9 @@ movement. Flying too high still invokes the existing vortex checkpoint reset.
 Sprout-9 is the vine traversal level. Cinder Bean now adds a timed steam vent:
 wait during STEAM/WARMING and cross during the six-second GO interval to rescue
 the heat-shield mechanic. The vent stays cool while either character is crossing.
-Frost Pea retains the accepted rescue baseline. Landing, flight, launch service, rewards, and the next
+Frost Pea now adds forgiving slippery movement, a level-local pickaxe, and one
+breakable ice column before the frozen explorer. See [RKT-62 notes](docs/RKT-62.md).
+Landing, flight, launch service, rewards, and the next
 destination flow remain shared. There is no new platformer engine or station hub.
 
 Run `npm ci`, `npm test`, and `npm run build` to reproduce validation.
