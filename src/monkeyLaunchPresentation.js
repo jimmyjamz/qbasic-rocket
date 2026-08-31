@@ -25,10 +25,6 @@ const pointer = {
   normalizedY: 0,
   hasInput: false
 };
-const smoothedPointer = {
-  x: 0,
-  y: 0
-};
 
 const monkeyOverlay = document.createElement('div');
 monkeyOverlay.setAttribute('aria-live', 'polite');
@@ -44,7 +40,7 @@ monkeyOverlay.style.transform = 'translate(-50%, -50%) scale(0.62)';
 monkeyOverlay.style.opacity = '0';
 monkeyOverlay.style.pointerEvents = 'none';
 monkeyOverlay.style.zIndex = '18';
-monkeyOverlay.style.transition = 'opacity 120ms ease, transform 160ms ease';
+monkeyOverlay.style.transition = 'opacity 90ms ease';
 monkeyOverlay.style.filter = 'drop-shadow(0 6px 8px rgba(0, 0, 0, 0.42))';
 document.body.appendChild(monkeyOverlay);
 
@@ -53,7 +49,6 @@ monkey.textContent = '🐒';
 monkey.style.fontSize = 'clamp(1.35rem, 3vw, 2.15rem)';
 monkey.style.lineHeight = '1';
 monkey.style.transformOrigin = '50% 85%';
-monkey.style.transition = 'transform 80ms linear';
 monkeyOverlay.appendChild(monkey);
 
 const bananaHand = document.createElement('div');
@@ -64,7 +59,6 @@ bananaHand.style.top = '0.28rem';
 bananaHand.style.fontSize = '1.05rem';
 bananaHand.style.opacity = '0';
 bananaHand.style.transform = 'rotate(-32deg) scale(0.78)';
-bananaHand.style.transition = 'opacity 90ms ease, transform 90ms ease';
 monkeyOverlay.appendChild(bananaHand);
 
 const monkeyLabel = document.createElement('div');
@@ -103,22 +97,23 @@ function updatePointerFromEvent(event) {
   pointer.hasInput = true;
 }
 
-function updateSmoothedPointer() {
-  const targetX = pointer.hasInput ? pointer.normalizedX : 0;
-  const targetY = pointer.hasInput ? pointer.normalizedY : 0;
-  smoothedPointer.x += (targetX - smoothedPointer.x) * 0.22;
-  smoothedPointer.y += (targetY - smoothedPointer.y) * 0.18;
+function getGuidedPointer() {
+  return {
+    x: pointer.hasInput ? pointer.normalizedX : 0,
+    y: pointer.hasInput ? pointer.normalizedY : 0
+  };
 }
 
 function getWindowPoint(elapsed = 0) {
   const progress = Math.min(elapsed / MONKEY_GAG_DURATION_MS, 1);
   const yVh = ROCKET_WINDOW_START_Y_VH + (ROCKET_WINDOW_ASCENT_Y_VH - ROCKET_WINDOW_START_Y_VH) * progress;
   const guideAuthority = 0.32 + Math.sin(progress * Math.PI) * 0.68;
+  const guided = getGuidedPointer();
   const x = window.innerWidth / 2
     + Math.sin(progress * Math.PI * 1.4) * 10
-    + smoothedPointer.x * window.innerWidth * (ROCKET_WINDOW_GUIDE_X_VW / 100) * guideAuthority;
+    + guided.x * window.innerWidth * (ROCKET_WINDOW_GUIDE_X_VW / 100) * guideAuthority;
   const y = window.innerHeight * (yVh / 100)
-    - smoothedPointer.y * window.innerHeight * (ROCKET_WINDOW_GUIDE_Y_VH / 100) * guideAuthority;
+    - guided.y * window.innerHeight * (ROCKET_WINDOW_GUIDE_Y_VH / 100) * guideAuthority;
   return { x, y };
 }
 
@@ -133,8 +128,6 @@ function startMonkeyGag(now) {
   gagActive = true;
   gagStartedAt = now;
   nextThrowIndex = 0;
-  smoothedPointer.x = pointer.hasInput ? pointer.normalizedX : 0;
-  smoothedPointer.y = pointer.hasInput ? pointer.normalizedY : 0;
   lastWindowPoint = getWindowPoint(0);
   setOverlayVisible(true);
   monkeyLabel.textContent = MONKEY_THROW_TARGET === 'aliens' ? 'Alien snack attack!' : 'Monkey business!';
@@ -161,13 +154,14 @@ function createBanana(now) {
   document.body.appendChild(node);
 
   const direction = nextThrowIndex % 2 === 0 ? -1 : 1;
+  const guided = getGuidedPointer();
   bananas.push({
     node,
     start: now,
     startX: lastWindowPoint.x + direction * 14,
     startY: lastWindowPoint.y + 4,
-    velocityX: direction * (150 + nextThrowIndex * 18) + smoothedPointer.x * 92,
-    velocityY: -110 - nextThrowIndex * 12 - Math.max(0, smoothedPointer.y) * 42,
+    velocityX: direction * (150 + nextThrowIndex * 18) + guided.x * 92,
+    velocityY: -110 - nextThrowIndex * 12 - Math.max(0, guided.y) * 42,
     gravity: 410,
     spin: direction * (290 + nextThrowIndex * 35)
   });
@@ -206,8 +200,6 @@ function updateMonkeyGag(now) {
     return;
   }
 
-  updateSmoothedPointer();
-
   const launching = isLaunchState();
   if (launching && !wasLaunching) {
     startMonkeyGag(now);
@@ -218,13 +210,14 @@ function updateMonkeyGag(now) {
     const elapsed = now - gagStartedAt;
     const bob = Math.sin(now * 0.018) * 2.4;
     const wave = Math.sin(now * 0.034) * 9;
+    const guided = getGuidedPointer();
     const point = getWindowPoint(elapsed);
     lastWindowPoint = point;
 
     monkeyOverlay.style.left = `${point.x}px`;
     monkeyOverlay.style.top = `${point.y}px`;
     monkeyOverlay.style.transform = `translate(-50%, -50%) translateY(${bob}px) scale(0.72)`;
-    monkey.style.transform = `rotate(${wave + smoothedPointer.x * 6}deg)`;
+    monkey.style.transform = `rotate(${wave + guided.x * 6}deg)`;
     bananaHand.style.opacity = elapsed < 1500 ? '1' : '0';
     bananaHand.style.transform = `rotate(${-32 + Math.sin(now * 0.044) * 34}deg) scale(${elapsed < 1500 ? 1 : 0.78})`;
 
