@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { surfaceAdventure, SPROUT_LEVEL, resolveSurfaceMovement } from './surfaceAdventureState.js';
+import { surfaceAdventure, SPROUT_LEVEL, CINDER_LEVEL, createSurfaceRun, resolveSurfaceMovement } from './surfaceAdventureState.js';
 import { createSurfaceAdventureView } from './surfaceAdventureView.js';
 
 const canvas = document.querySelector('#scene');
@@ -116,8 +116,9 @@ scene.add(launchSpectators);
 
 const planetSurface = new THREE.Group();
 scene.add(planetSurface);
-const surfaceView = createSurfaceAdventureView(createAstronaut);
-scene.add(surfaceView.group);
+const surfaceViews = [SPROUT_LEVEL, CINDER_LEVEL].map(level => createSurfaceAdventureView(createAstronaut, level));
+let surfaceView = surfaceViews[0];
+surfaceViews.forEach(view => scene.add(view.group));
 
 const destinationOrbs = createDestinationOrbs();
 scene.add(destinationOrbs);
@@ -393,8 +394,9 @@ function completeLanding() {
   launchPad.visible = false;
   launchSpectators.visible = false;
   hasLeftLaunchpad = true;
-  surfaceAdventure.enabled = currentPlanetIndex === 0;
-  surfaceAdventure.run.reset();
+  surfaceAdventure.enabled = currentPlanetIndex < 2;
+  surfaceView = surfaceViews[currentPlanetIndex] ?? surfaceViews[0];
+  surfaceAdventure.run = createSurfaceRun(currentPlanetIndex === 1 ? CINDER_LEVEL : SPROUT_LEVEL);
   surfaceView.group.position.set(lastLandedX, ASTRONAUT_GROUND_Y, 0);
 
   if (!hasSwappedDestinationScene) {
@@ -498,8 +500,9 @@ function updateAstronaut(dt, now) {
   const direction = Number(right) - Number(left);
   const desiredVelocity = direction * WALK_SPEED;
   const localX = astronaut.position.x - surfaceView.group.position.x;
-  const onVines = surfaceAdventure.active && localX > SPROUT_LEVEL.obstacleLeft - SPROUT_LEVEL.radius && localX < SPROUT_LEVEL.obstacleRight + SPROUT_LEVEL.radius;
-  const groundY = ASTRONAUT_GROUND_Y + (onVines ? SPROUT_LEVEL.obstacleHeight : 0);
+  const level = surfaceAdventure.run.level;
+  const onVines = surfaceAdventure.active && level.kind === 'vines' && localX > level.obstacleLeft - level.radius && localX < level.obstacleRight + level.radius;
+  const groundY = ASTRONAUT_GROUND_Y + (onVines ? level.obstacleHeight : 0);
   const isGrounded = astronaut.position.y <= groundY + 0.01;
 
   jetpackActive = keys.has('Space');
@@ -510,10 +513,11 @@ function updateAstronaut(dt, now) {
 
   if (surfaceAdventure.active) {
     const previous = { x: localX, y: astronaut.position.y - ASTRONAUT_GROUND_Y };
+    surfaceAdventure.run.tick(dt, previous);
     const result = resolveSurfaceMovement(previous, {
       x: previous.x + astronautVelocityX * dt,
       y: Math.min(previous.y + astronautVelocityY * dt, ASTRONAUT_MAX_Y - ASTRONAUT_GROUND_Y)
-    });
+    }, level, surfaceAdventure.run.vent.safe);
     astronaut.position.x = surfaceView.group.position.x + result.x;
     astronaut.position.y = ASTRONAUT_GROUND_Y + result.y;
     if (result.blockedX) astronautVelocityX = 0;
@@ -548,7 +552,7 @@ function updateAstronaut(dt, now) {
   const nearRocket = isAstronautNearRocket();
   const boardable = canBoardRocket();
   actionButton.disabled = !boardable;
-  actionButton.textContent = boardable ? 'Enter rocket (E)' : nearRocket && surfaceAdventure.active && !['rescued', 'boarded'].includes(surfaceAdventure.run.state) ? 'Bring botanist to rocket' : nearRocket ? 'Land to enter rocket' : 'Return to rocket';
+  actionButton.textContent = boardable ? 'Enter rocket (E)' : nearRocket && surfaceAdventure.active && !['rescued', 'boarded'].includes(surfaceAdventure.run.state) ? 'Bring crew to rocket' : nearRocket ? 'Land to enter rocket' : 'Return to rocket';
   loopStatusLabel.textContent = jetpackActive ? 'Jetpack firing' : boardable ? 'Ready to board' : 'Exploring';
   throttleLabel.textContent = jetpackActive ? 'Jetpack' : isGrounded ? 'Suit ready' : 'Coasting';
 }
@@ -1520,7 +1524,9 @@ function updateUi() {
     launchButton.disabled = true;
     nextButton.disabled = true;
     helpLabel.textContent = surfaceAdventure.active
-      ? 'A/D: walk · Space: jetpack · E: board. Cross the vines → rescue → return left. Avoid flying too high.'
+      ? surfaceAdventure.run.level.kind === 'steam'
+        ? 'A/D: walk · E: board. WAIT for steam to stop → cross on GO → rescue → return left.'
+        : 'A/D: walk · Space: jetpack · E: board. Cross the vines → rescue → return left. Avoid flying too high.'
       : 'Walk with A/D or arrows. Hold Space for the jetpack. Stay too high for too long and the black hole resets you to the rocket.';
   }
 }

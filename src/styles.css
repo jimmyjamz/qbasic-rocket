@@ -24,7 +24,9 @@ body[data-surface-adventure="active"] .controls { margin-top: 0; }
 body[data-surface-adventure="active"] .controls button { padding: 0.5rem 0.75rem; font-size: 0.8rem; }
 body[data-surface-adventure="active"] .help-text { margin-top: 0.6rem; font-size: 0.78rem; }
 body[data-surface-adventure="active"] #missionTracker { width: min(20rem, calc(100vw - 2rem)) !important; padding: 0.6rem 0.75rem !important; }
-body[data-surface-adventure="active"] #missionTracker > div:last-child { display: none; }
+body[data-surface-adventure="active"] #missionTracker > div:last-child { display: none !important; }
+body[data-surface-adventure="active"] #missionTracker > div:nth-child(2) { font-size: 1rem !important; }
+body[data-surface-adventure="active"] #missionTracker > div:nth-child(3) { font-size: 0.8rem !important; }
 @media (max-width: 700px) {
   body[data-surface-adventure="active"] #missionTracker { bottom: 9rem !important; right: 1rem !important; }
 }

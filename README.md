@@ -74,16 +74,19 @@ Astronaut mode:
 Exit on Sprout-9 to enter a short authored side-scrolling trail. Move right with
 A/D or arrows, hold Space to jetpack over the raised vine barrier, and reach the
 green-suited botanist at the SOS sign. Escort them left over the vines to the
-glowing rocket ring. Both characters must return to ground level near the rocket
+small rocket ground marker. Both characters must return to ground level near the rocket
 before E enables boarding. The botanist retraces your route, including jetpack
 movement. Flying too high still invokes the existing vortex checkpoint reset.
 
-This first slice applies only to Sprout-9. Cinder Bean and Frost Pea retain the
-accepted rescue baseline. Landing, flight, launch service, rewards, and the next
+Sprout-9 is the vine traversal level. Cinder Bean now adds a timed steam vent:
+wait during STEAM/WARMING and cross during the six-second GO interval to rescue
+the heat-shield mechanic. The vent stays cool while either character is crossing.
+Frost Pea retains the accepted rescue baseline. Landing, flight, launch service, rewards, and the next
 destination flow remain shared. There is no new platformer engine or station hub.
 
 Run `npm ci`, `npm test`, and `npm run build` to reproduce validation.
 See [RKT-58 implementation and playtest notes](docs/RKT-58.md) for details.
+See [RKT-58 polish, RKT-59 fix and RKT-60 validation](docs/RKT-60.md) for the latest changes.
 
 ## Debug configuration
 
