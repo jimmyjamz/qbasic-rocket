@@ -68,7 +68,9 @@ export function createSurfaceRun(level = SPROUT_LEVEL) {
   let columnBroken = false;
   let breakProgress = 0;
   let contactStage = 'blocked';
+  let theftClock = 0;
   let theftProgress = 0;
+  let theftBoardingProgress = 0;
   const run = {
     level,
     get hasPickaxe() { return hasPickaxe; },
@@ -85,6 +87,7 @@ export function createSurfaceRun(level = SPROUT_LEVEL) {
     get vent() { return steamPhase(ventClock); },
     get contactStage() { return contactStage; },
     get theftProgress() { return theftProgress; },
+    get theftBoardingProgress() { return theftBoardingProgress; },
     get canEnterGarden() { return level.kind === 'aliens' && contactStage === 'gate' && Math.abs(run.player.x - level.gateX) < 1.6 && run.player.y < 0.75; },
     get canWelcome() { return level.kind === 'aliens' && contactStage === 'garden' && Math.abs(run.player.x - level.targetX) < 1.25 && run.player.y < 0.75; },
     prepareContact(hasTranslator, completed = false) {
@@ -95,7 +98,9 @@ export function createSurfaceRun(level = SPROUT_LEVEL) {
     startTheft() {
       if (level.kind === 'theft' && run.state === 'visible') {
         run.state = 'stealing';
+        theftClock = 0;
         theftProgress = 0;
+        theftBoardingProgress = 0;
       }
     },
     tick(dt, player) {
@@ -121,16 +126,23 @@ export function createSurfaceRun(level = SPROUT_LEVEL) {
       columnBroken = false;
       breakProgress = 0;
       contactStage = 'blocked';
+      theftClock = 0;
       theftProgress = 0;
+      theftBoardingProgress = 0;
     },
     update(dt, player) {
       clock += dt;
       run.player = { x: player.x, y: player.y };
       if (level.kind === 'theft') {
         if (run.state === 'stealing') {
-          theftProgress = Math.min(1, theftProgress + dt / THEFT_SEQUENCE_SECONDS);
-          run.progress = Math.round(theftProgress * 100);
-          if (theftProgress >= 1) run.state = 'stranded';
+          theftClock = Math.min(THEFT_SEQUENCE_SECONDS, theftClock + dt);
+          const overallProgress = theftClock / THEFT_SEQUENCE_SECONDS;
+          theftBoardingProgress = Math.min(1, overallProgress / THEFT_BOARDING_PROGRESS);
+          theftProgress = overallProgress < THEFT_LAUNCH_PROGRESS
+            ? 0
+            : Math.min(1, (overallProgress - THEFT_LAUNCH_PROGRESS) / (1 - THEFT_LAUNCH_PROGRESS));
+          run.progress = Math.round(overallProgress * 100);
+          if (overallProgress >= 1) run.state = 'stranded';
         }
         return;
       }
