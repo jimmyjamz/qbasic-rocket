@@ -2,32 +2,37 @@
 
 Gherkin-7 is a fourth, purple-and-lime authored mini-level separate from the three
 rescue levels. On the first visit, seven world-space aliens crowd the rocket door.
-The astronaut can move a few steps in either direction, but cannot pass the crowd
+The lead alien follows the astronaut upward during jetpack flight, making the
+blocked route visible instead of feeling like an invisible wall. The astronaut
+can move a few steps in either direction, but cannot pass the crowd
 into the garden. Mission Control explains their signals may be warnings and
 directs the astronaut back aboard.
 
 After boarding, Return to station uses the established animated flight. The
 station supply stop then exposes one Collect Translator Badge action. This is a
-single mission flag, not a general inventory: it cannot duplicate, does not alter
-rescue rewards, and persists only for the browser session.
+single mission flag, not a general inventory: it cannot duplicate, adds exactly
+one badge to the session counter, does not alter rescue rewards, and persists
+only for the browser session.
 
 Returning to Gherkin-7 changes the same mini-level. On exit, the carried item
 translates automatically: the crowd is gone and one world-space alien welcomes
 the astronaut: “Welcome! Please avoid our moon-pickle garden.” The path is open.
 Boarding changes the mission to complete and
-enables station return. RKT-54 grants no First Contact reward; RKT-56 owns that.
+enables station return. Peaceful resolution grants no second First Contact
+reward; RKT-56 owns that future reward.
 
 Reset remains an immediate station return and preserves current session mission
 progress, consistent with badges and the existing hub. Reload starts a fresh
-session. Gherkin never publishes a rescue target, increments rescues/badges, or
-shows a passenger.
+session. Gherkin never publishes a rescue target, increments rescues, or shows a
+passenger.
 
 ## Automated validation
 
 - 15 tests pass, including the expanded full application journey.
 - The journey selects the fourth planet, checks hidden rescue state, first-visit
-  block/retreat, animated home return, one-time station pickup, return visit,
-  translator resolution, boarding/complete state, and unchanged badge count.
+  block/retreat, the lead alien following jetpack flight, animated home return,
+  one-time station pickup and badge increment, return visit, translator
+  resolution, boarding/complete state, and no additional completion reward.
 - Existing Sprout/Cinder/Frost, station, passenger, service/monkey, vortex and
   Reset/interrupted-return coverage remains green.
 - Production build passes with the existing nonblocking bundle-size warning.
@@ -38,14 +43,17 @@ shows a passenger.
 ## Playtest
 
 1. At station choose Gherkin-7. Launch, land and exit. Confirm aliens gather,
-   block the mission peacefully, and Mission Control says to retreat.
+   block the mission peacefully, and Mission Control says to retreat. Jet upward
+   and confirm the lead alien rises too, visibly blocking the flight route.
 2. Board and Return to station. Confirm zero rescue/passenger/reward changes.
-3. Collect Translator Badge at Supply stop. The button disappears and status
-   changes to Translator aboard. Try Reset: it must remain collected.
+3. Collect Translator Badge at Supply stop. Confirm the badge counter increases
+   by exactly one, the button disappears, and status changes to Translator
+   aboard. Try Reset: it must remain collected and cannot increment again.
 4. Choose Gherkin-7 again, fly back and exit. Translation should be automatic.
 5. Confirm only one welcoming alien remains, the path is open, and the moon-pickle garden explanation appears.
    Board, confirm mission complete and return home.
-6. Confirm rescues and Space Hero badges did not increment. Launch a rescue
-   planet and check its normal flow still works.
+6. Confirm rescues did not increment and resolution adds no second badge beyond
+   the Translator Badge. Launch a rescue planet and check its normal flow still
+   works.
 
 Next: RKT-56 adds the First Contact reward. RKT-61 remains deferred.

@@ -296,10 +296,16 @@ test('full app: surface rescue, rewards, reboarding, planet service, other plane
     assert.equal(surfaceAdventure.active, true);
     assert.equal(surfaceAdventure.run.level.kind, 'aliens');
     assert.equal(surfaceAdventure.run.friendly, false);
+    const crowd = scene.getObjectByName('contactSurfaceAdventure').children.find((child) => child.children.length === 7);
     const contactPlayerStart = player.position.x;
     await move('KeyD', 4);
     assert.ok(player.position.x > contactPlayerStart + 1, 'a few steps are available');
     assert.ok(player.position.x < contactPlayerStart + 3.5, 'alien crowd blocks the garden path');
+    key('Space', true);
+    await advance(0.8);
+    assert.ok(crowd.children[0].position.y > 0.5, 'lead alien flies up to visibly block the jetpack route');
+    key('Space', false);
+    await advance(0.8);
     assert.equal(scene.getObjectByName('contactSurfaceAdventure').visible, true);
     await move('KeyA', 4);
     await move('KeyD', 0.5);
@@ -318,6 +324,8 @@ test('full app: surface rescue, rewards, reboarding, planet service, other plane
     assert.equal(document.body.dataset.translatorBadge, 'acquired');
     assert.equal(document.body.dataset.firstContactState, 'translator-ready');
     assert.equal($('#translatorButton').hidden, true);
+    assert.equal(document.body.dataset.sessionBadges, String(Number(rewardsBeforeContact) + 1), 'translator adds exactly one badge');
+    const rewardsAfterTranslator = document.body.dataset.sessionBadges;
     for (let i = 0; i < 5 && !$('#launchButton').textContent.includes('Gherkin-7'); i++) $('#nextButton').click();
     await advance(0.1);
     $('#launchButton').click();
@@ -332,7 +340,7 @@ test('full app: surface rescue, rewards, reboarding, planet service, other plane
     $('#actionButton').click();
     await advance(0.1);
     assert.equal(document.body.dataset.firstContactState, 'complete');
-    assert.equal(document.body.dataset.sessionBadges, rewardsBeforeContact, 'RKT-56 reward is not granted by this slice');
+    assert.equal(document.body.dataset.sessionBadges, rewardsAfterTranslator, 'resolution adds no RKT-56 reward yet');
     assert.equal($('#stationReturnButton').hidden, false);
   } finally {
     dom.window.close();

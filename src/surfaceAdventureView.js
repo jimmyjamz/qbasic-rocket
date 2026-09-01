@@ -187,7 +187,12 @@ export function createSurfaceAdventureView(createAstronaut, level = SPROUT_LEVEL
       if (contact) {
         alienCrowd.visible = !run.friendly;
         friendlyAlien.visible = Boolean(run.friendly);
-        alienCrowd.children.forEach((alien, index) => { alien.position.y = Math.sin(performance.now() * 0.005 + index) * 0.06; });
+        alienCrowd.children.forEach((alien, index) => {
+          const bob = Math.sin(performance.now() * 0.005 + index) * 0.06;
+          // The lead greeter mirrors jetpack height at the boundary so the
+          // all-altitude crowd collision is visible rather than an unseen wall.
+          alien.position.y = index === 0 ? Math.max(bob, run.player.y) : bob;
+        });
         friendlyAlien.rotation.z = Math.sin(performance.now() * 0.006) * 0.08;
       }
       vortexStart = null;
