@@ -7,9 +7,11 @@ const LAND_Y = -1.25;
 const ASTRONAUT_GROUND_Y = LAND_Y + 0.82;
 const ASTRONAUT_MAX_Y = LAND_Y + 9.2;
 const LAUNCH_TIME_MS = 7200;
-const THEFT_DELAY_MS = 420;
-const THEFT_TIME_MS = 2300;
-const WALK_SPEED = 2.35;
+const THEFT_DELAY_MS = 520;
+const THEFT_TIME_MS = 2600;
+const WALK_SPEED = 2.6;
+const WALK_MIN_X = -1.8;
+const WALK_MAX_X = 22.5;
 const GRAVITY = -7.2;
 const JETPACK_THRUST = 12.4;
 const MAX_FALL_SPEED = -5.4;
@@ -42,7 +44,7 @@ const bridge = {
 const run = createRocketTheftRun();
 const keys = new Set();
 const rocketStart = new THREE.Vector3();
-const landingTarget = new THREE.Vector3(0.75, LAND_Y, 0);
+const landingTarget = new THREE.Vector3(0.65, LAND_Y, 0);
 let animationStartedAt = 0;
 let astronautVelocityX = 0;
 let astronautVelocityY = 0;
@@ -154,6 +156,16 @@ function beginTheftLaunch(now) {
   syncTheftDataset();
   animationStartedAt = now;
   rocketStart.set(0, START_Y, 0);
+
+  // RKT-65A correction: the astronaut must remain inside/hidden during flight.
+  // Earlier Sneakle code left a previously visible astronaut fixed on-screen.
+  if (bridge.astronaut) {
+    bridge.astronaut.visible = false;
+    bridge.astronaut.position.set(0, ASTRONAUT_GROUND_Y, 0.18);
+    bridge.astronaut.rotation.set(0, 0, 0);
+    bridge.astronaut.scale.setScalar(1);
+  }
+
   if (bridge.rocket) {
     rocketWasVisible = bridge.rocket.visible;
     bridge.rocket.visible = true;
@@ -184,6 +196,7 @@ function completeTheftLanding() {
     bridge.rocket.rotation.set(0, 0, 0);
     bridge.rocket.visible = true;
   }
+  if (bridge.astronaut) bridge.astronaut.visible = false;
   setTheftControls({ mode: 'Landed', planet: THEFT_PLANET.name, throttle: 'Landed', status: 'Landed' });
   launchButton.disabled = false;
   launchButton.textContent = 'Rocket ready';
@@ -224,7 +237,7 @@ function finishTheft() {
   actionButton.disabled = true;
   actionButton.textContent = 'Find another way off';
   nextButton.disabled = true;
-  helpLabel.textContent = 'The rocket is gone for now. Walk, jetpack, and explore Sneakle-5 for another way off. No fighting — solve the problem.';
+  helpLabel.textContent = 'The rocket is gone for now. Move right like the other planet levels and look for another way off. No fighting — solve the problem.';
 }
 
 function updateTheftOpening(now) {
@@ -246,6 +259,8 @@ function updateTheftLaunch(now) {
   const y = bezier(START_Y, SPACE_Y, SPACE_Y - 0.6, LAND_Y, eased);
   const x = THREE.MathUtils.lerp(0, landingTarget.x, THREE.MathUtils.smoothstep(progress, 0.72, 1));
   const z = Math.sin(progress * Math.PI) * -0.65;
+
+  if (bridge.astronaut) bridge.astronaut.visible = false;
   if (bridge.rocket) {
     bridge.rocket.visible = true;
     bridge.rocket.position.set(x, y, z);
@@ -277,7 +292,7 @@ function updateRocketTheft(now) {
   if (bridge.rocket) {
     const wobble = Math.sin(now * 0.015) * 0.12;
     bridge.rocket.visible = true;
-    bridge.rocket.position.x = rocketStart.x + eased * 3.3;
+    bridge.rocket.position.x = rocketStart.x + eased * 4.4;
     bridge.rocket.position.y = rocketStart.y + easeOutCubic(progress) * 8.2;
     bridge.rocket.position.z = -eased * 0.9;
     bridge.rocket.rotation.z = -0.15 - eased * 0.45 + wobble * 0.2;
@@ -287,7 +302,7 @@ function updateRocketTheft(now) {
   loopStatusLabel.textContent = progress < 0.7 ? 'Mischief in progress' : 'Find another way off';
   helpLabel.textContent = progress < 0.35
     ? 'The tiny aliens are boarding. This is not a drill. It is also not combat.'
-    : 'They are stealing the rocket! Watch it leave, then explore for another way off the planet.';
+    : 'They are stealing the rocket! Watch it leave, then continue right to search for another way off.';
   if (progress >= 1) finishTheft();
 }
 
@@ -298,15 +313,20 @@ function updateTheftAstronaut(now) {
   const direction = Number(right) - Number(left);
   const jetpack = keys.has('Space');
   const dt = 1 / 60;
+
   astronautVelocityX = THREE.MathUtils.lerp(astronautVelocityX, direction * WALK_SPEED, 0.18);
   astronautVelocityY += (jetpack ? JETPACK_THRUST : GRAVITY) * dt;
   astronautVelocityY = THREE.MathUtils.clamp(astronautVelocityY, MAX_FALL_SPEED, MAX_RISE_SPEED);
-  bridge.astronaut.position.x = THREE.MathUtils.clamp(bridge.astronaut.position.x + astronautVelocityX * dt, -5.2, 5.8);
+  bridge.astronaut.position.x = THREE.MathUtils.clamp(bridge.astronaut.position.x + astronautVelocityX * dt, WALK_MIN_X, WALK_MAX_X);
   bridge.astronaut.position.y = THREE.MathUtils.clamp(bridge.astronaut.position.y + astronautVelocityY * dt, ASTRONAUT_GROUND_Y, ASTRONAUT_MAX_Y);
   if (bridge.astronaut.position.y <= ASTRONAUT_GROUND_Y + 0.001 && astronautVelocityY < 0) astronautVelocityY = 0;
   bridge.astronaut.rotation.z = THREE.MathUtils.lerp(bridge.astronaut.rotation.z, -direction * 0.12, 0.14);
   bridge.astronaut.rotation.x = THREE.MathUtils.lerp(bridge.astronaut.rotation.x, jetpack ? -0.08 : 0, 0.12);
   if (direction !== 0) bridge.astronaut.rotation.y = direction > 0 ? 0.22 : -0.22;
+
+  const body = bridge.astronaut.children[0];
+  if (body) body.position.y = 0.46 + Math.sin(now * 0.01) * 0.025 * Math.abs(direction);
+
   const flames = bridge.astronaut.getObjectByName('jetpackFlames');
   const light = bridge.astronaut.getObjectByName('jetpackLight');
   if (flames) {
@@ -335,7 +355,7 @@ function renderTheftSelection() {
   const destination = document.querySelector('#stationDestination');
   const objective = document.querySelector('#stationObjective');
   if (destination) destination.textContent = `Next destination: ${THEFT_PLANET.name}`;
-  if (objective) objective.textContent = 'Scout a new alien planet. The local aliens look mischievous, not dangerous.';
+  if (objective) objective.textContent = 'Scout a side-scroller planet. The local aliens look mischievous, not dangerous.';
 }
 
 function setTheftControls({ mode, planet, throttle, status }) {
@@ -398,19 +418,27 @@ function createTheftSurface() {
   group.name = 'rocketTheftSurface';
   const terrain = new THREE.MeshStandardMaterial({ color: THEFT_PLANET.surface, roughness: 0.86, metalness: 0.04 });
   const accent = new THREE.MeshStandardMaterial({ color: THEFT_PLANET.accent, emissive: THEFT_PLANET.accent, emissiveIntensity: 0.16, roughness: 0.45 });
-  const ground = new THREE.Mesh(new THREE.BoxGeometry(14, 0.42, 4.8), terrain);
-  ground.position.y = LAND_Y - 0.42;
+
+  const ground = new THREE.Mesh(new THREE.BoxGeometry(28, 0.42, 4.8), terrain);
+  ground.position.set(10, LAND_Y - 0.42, 0);
   group.add(ground);
-  const horizon = new THREE.Mesh(new THREE.SphereGeometry(7.5, 48, 16, 0, Math.PI * 2, 0, Math.PI / 2), terrain);
-  horizon.position.set(0, LAND_Y - 1.8, -3.7);
+
+  const horizon = new THREE.Mesh(new THREE.SphereGeometry(9.5, 48, 16, 0, Math.PI * 2, 0, Math.PI / 2), terrain);
+  horizon.position.set(10, LAND_Y - 1.8, -3.7);
   horizon.scale.y = 0.32;
   group.add(horizon);
-  for (let i = 0; i < 14; i += 1) {
+
+  createSurfaceSign(group, 'ROCKET · E', 0, 1.95, 1.9);
+  createSurfaceSign(group, 'TINY FOOTPRINTS?', 4.8, 1.55, 2.6);
+  createSurfaceSign(group, 'FIND ANOTHER WAY OFF →', 12.5, 1.65, 3.6);
+
+  for (let i = 0; i < 18; i += 1) {
     const tower = createWobblyTower(accent, i);
-    tower.position.set(-5.8 + i * 0.85, LAND_Y - 0.16, -1.55 + Math.sin(i * 1.7) * 0.7);
+    tower.position.set(-0.8 + i * 1.35, LAND_Y - 0.16, -1.55 + Math.sin(i * 1.7) * 0.7);
     tower.rotation.y = i * 0.61;
     group.add(tower);
   }
+
   bridge.thiefCrew = new THREE.Group();
   bridge.thiefCrew.name = 'rocketThiefCrew';
   [2.45, 2.9, 3.35].forEach((x, index) => {
@@ -422,13 +450,36 @@ function createTheftSurface() {
   return group;
 }
 
+function createSurfaceSign(group, text, x, y, width) {
+  const canvas = document.createElement('canvas');
+  canvas.width = 768;
+  canvas.height = 128;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#2d1744';
+  ctx.fillRect(0, 0, 768, 128);
+  ctx.strokeStyle = '#ffdd66';
+  ctx.lineWidth = 6;
+  ctx.strokeRect(3, 3, 762, 122);
+  ctx.fillStyle = '#fff9d7';
+  ctx.font = 'bold 42px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, 384, 64);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture }));
+  sprite.position.set(x, y, 0.5);
+  sprite.scale.set(width, width / 6, 1);
+  group.add(sprite);
+}
+
 function createWobblyTower(material, index) {
   const group = new THREE.Group();
   const base = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.2, 0.5, 7), material);
   base.position.y = 0.25;
   const top = new THREE.Mesh(new THREE.ConeGeometry(0.2, 0.7 + (index % 3) * 0.1, 7), material);
   top.position.y = 0.86;
-  top.rotation.z = (index % 2 ? 0.16 : -0.16);
+  top.rotation.z = index % 2 ? 0.16 : -0.16;
   group.add(base, top);
   return group;
 }
@@ -461,7 +512,7 @@ function animateTheftSurface(now) {
   if (!bridge.theftSurface?.visible) return;
   bridge.theftSurface.children.forEach((child, index) => {
     if (child.name === 'rocketThiefCrew') return;
-    if (index < 2) return;
+    if (index < 5) return;
     child.rotation.z = Math.sin(now * 0.0018 + index) * 0.055;
   });
 }
@@ -472,14 +523,17 @@ function applyTheftCameraAndVisibility(camera) {
   if (bridge.launchSpectators) bridge.launchSpectators.visible = false;
   const follow = run.state === ROCKET_THEFT_STATES.FLYING || run.state === ROCKET_THEFT_STATES.STEALING ? bridge.rocket : bridge.astronaut;
   if (camera && follow) {
-    const desiredX = THREE.MathUtils.clamp(follow.position.x * 0.35, -1.8, 2.2);
+    const sideScrollerX = run.state === ROCKET_THEFT_STATES.STRANDED
+      ? THREE.MathUtils.clamp(follow.position.x + 2.2, 2.2, 18.5)
+      : THREE.MathUtils.clamp(follow.position.x * 0.35, -1.8, 2.2);
     const desiredY = run.state === ROCKET_THEFT_STATES.FLYING
       ? THREE.MathUtils.clamp(follow.position.y + 2.35, 1.8, 8.8)
       : THREE.MathUtils.clamp(ASTRONAUT_GROUND_Y + 2.35 + (follow.position.y - ASTRONAUT_GROUND_Y) * 0.28, 1.8, 8.8);
-    camera.position.x = THREE.MathUtils.lerp(camera.position.x, desiredX, 0.18);
+    camera.position.x = THREE.MathUtils.lerp(camera.position.x, sideScrollerX, 0.18);
     camera.position.y = THREE.MathUtils.lerp(camera.position.y, desiredY, 0.18);
-    camera.position.z = THREE.MathUtils.lerp(camera.position.z, 12, 0.18);
-    camera.lookAt(follow.position.x * 0.36, run.state === ROCKET_THEFT_STATES.FLYING ? follow.position.y + 1.55 : ASTRONAUT_GROUND_Y + 1.55, 0);
+    camera.position.z = THREE.MathUtils.lerp(camera.position.z, run.state === ROCKET_THEFT_STATES.STRANDED ? 10 : 12, 0.18);
+    const lookAtX = run.state === ROCKET_THEFT_STATES.STRANDED ? sideScrollerX : follow.position.x * 0.36;
+    camera.lookAt(lookAtX, run.state === ROCKET_THEFT_STATES.FLYING ? follow.position.y + 1.55 : ASTRONAUT_GROUND_Y + 1.55, 0);
   }
   if (bridge.rocket && [ROCKET_THEFT_STATES.FLYING, ROCKET_THEFT_STATES.STEALING].includes(run.state)) {
     const flameGroup = bridge.rocket.getObjectByName('flameGroup');
