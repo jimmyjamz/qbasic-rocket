@@ -129,20 +129,20 @@ export function createSurfaceAdventureView(createAstronaut, level = SPROUT_LEVEL
       const arm = new THREE.Group();
       arm.name = side < 0 ? 'leftAlienArm' : 'rightAlienArm';
       arm.position.set(side * 0.27, 0.73, 0);
-      const limb = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.045, 0.55, 8), green);
-      limb.position.y = -0.25;
+      const limb = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.04, 0.42, 8), green);
+      limb.position.y = -0.19;
       arm.add(limb);
       const palm = new THREE.Mesh(new THREE.SphereGeometry(0.085, 10, 8), green);
       palm.scale.set(0.85, 0.65, 0.75);
-      palm.position.y = -0.55;
+      palm.position.y = -0.42;
       arm.add(palm);
       for (let finger = -1; finger <= 1; finger++) {
         const digit = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.02, 0.16, 6), green);
-        digit.position.set(finger * 0.05, -0.65, 0);
+        digit.position.set(finger * 0.045, -0.52, 0);
         digit.rotation.z = finger * 0.32;
         arm.add(digit);
       }
-      arm.rotation.z = side * -0.38;
+      arm.rotation.z = side * 0.38;
       alien.add(arm);
     }
     return alien;
@@ -238,16 +238,16 @@ export function createSurfaceAdventureView(createAstronaut, level = SPROUT_LEVEL
           alien.rotation.y = Math.sin(time * 2.8 + phase) * 0.18;
           const leftArm = alien.getObjectByName('leftAlienArm');
           const rightArm = alien.getObjectByName('rightAlienArm');
-          leftArm.rotation.z = 0.35 + Math.sin(time * 6.1 + phase) * 0.65;
-          rightArm.rotation.z = -0.35 - Math.cos(time * 5.4 + phase) * 0.65;
+          leftArm.rotation.z = -0.38 - Math.sin(time * 6.1 + phase) * 0.28;
+          rightArm.rotation.z = 0.38 + Math.cos(time * 5.4 + phase) * 0.28;
           // The lead greeter mirrors jetpack height at the boundary so the
           // all-altitude crowd collision is visible rather than an unseen wall.
           alien.position.y = index === 0 ? Math.max(hop, run.player.y) : hop;
         });
         const friendlyTime = performance.now() * 0.001;
         friendlyAlien.rotation.z = Math.sin(friendlyTime * 3) * 0.055;
-        friendlyAlien.getObjectByName('leftAlienArm').rotation.z = 0.42;
-        friendlyAlien.getObjectByName('rightAlienArm').rotation.z = -2.2 + Math.sin(friendlyTime * 7) * 0.32;
+        friendlyAlien.getObjectByName('leftAlienArm').rotation.z = -0.42;
+        friendlyAlien.getObjectByName('rightAlienArm').rotation.z = 2.05 + Math.sin(friendlyTime * 7) * 0.22;
       }
       vortexStart = null;
       npc.scale.setScalar(0.85);
