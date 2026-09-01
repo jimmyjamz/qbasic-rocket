@@ -297,6 +297,10 @@ test('full app: surface rescue, rewards, reboarding, planet service, other plane
     assert.equal(surfaceAdventure.run.level.kind, 'aliens');
     assert.equal(surfaceAdventure.run.contactStage, 'blocked');
     const crowd = scene.getObjectByName('contactSurfaceAdventure').children.find((child) => child.children.length === 7);
+    const crowdPose = { x: crowd.children[2].position.x, z: crowd.children[2].rotation.z };
+    await advance(0.25);
+    assert.ok(Math.abs(crowd.children[2].position.x - crowdPose.x) > 0.01, 'alien crowd visibly shuffles');
+    assert.ok(Math.abs(crowd.children[2].rotation.z - crowdPose.z) > 0.01, 'alien crowd visibly leans in discomfort');
     const contactPlayerStart = player.position.x;
     await move('KeyD', 4);
     assert.ok(player.position.x > contactPlayerStart + 1, 'a few steps are available');

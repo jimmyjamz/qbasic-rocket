@@ -8,6 +8,11 @@ can move a few steps in either direction, but cannot pass the crowd
 into the garden. Mission Control explains their signals may be warnings and
 directs the astronaut back aboard.
 
+The crowd uses staggered hops, nervous shuffling, uneven leaning, and small
+forward/back surges to communicate visible confusion and discomfort. After the
+translator clears the misunderstanding, the single garden keeper uses a slower,
+calmer wave so the emotional change reads without dialogue or combat.
+
 After boarding, Return to station uses the established animated flight. The
 station supply stop then exposes one Collect Translator Badge action. This is a
 single mission flag, not a general inventory: it cannot duplicate, adds exactly

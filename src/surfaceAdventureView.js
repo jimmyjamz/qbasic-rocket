@@ -135,6 +135,8 @@ export function createSurfaceAdventureView(createAstronaut, level = SPROUT_LEVEL
     [2.6, 3.35, 4.1, 4.85, 5.6, 6.35, 7.1].forEach((x, index) => {
       const alien = createAlien();
       alien.position.set(x, 0, index % 2 ? 0.35 : -0.2);
+      alien.userData.crowdHome = { x, z: alien.position.z };
+      alien.userData.crowdPhase = index * 1.37;
       alien.scale.setScalar(0.9 + (index % 3) * 0.08);
       alienCrowd.add(alien);
     });
@@ -204,12 +206,21 @@ export function createSurfaceAdventureView(createAstronaut, level = SPROUT_LEVEL
         gardenGate.visible = run.contactStage !== 'welcomed';
         gardenSign.visible = run.contactStage !== 'welcomed';
         alienCrowd.children.forEach((alien, index) => {
-          const bob = Math.sin(performance.now() * 0.005 + index) * 0.06;
+          const time = performance.now() * 0.001;
+          const phase = alien.userData.crowdPhase;
+          const home = alien.userData.crowdHome;
+          const shuffle = Math.sin(time * (4.2 + index * 0.13) + phase);
+          const surge = Math.sin(time * 2.3 + phase * 1.7);
+          const hop = Math.abs(Math.sin(time * (5.5 + index * 0.2) + phase)) * (index % 2 ? 0.12 : 0.2);
+          alien.position.x = home.x + shuffle * 0.18 + surge * 0.08;
+          alien.position.z = home.z + Math.cos(time * 3.1 + phase) * 0.18;
+          alien.rotation.z = shuffle * (index % 2 ? 0.2 : -0.2);
+          alien.rotation.y = Math.sin(time * 2.8 + phase) * 0.18;
           // The lead greeter mirrors jetpack height at the boundary so the
           // all-altitude crowd collision is visible rather than an unseen wall.
-          alien.position.y = index === 0 ? Math.max(bob, run.player.y) : bob;
+          alien.position.y = index === 0 ? Math.max(hop, run.player.y) : hop;
         });
-        friendlyAlien.rotation.z = Math.sin(performance.now() * 0.006) * 0.08;
+        friendlyAlien.rotation.z = Math.sin(performance.now() * 0.003) * 0.055;
       }
       vortexStart = null;
       npc.scale.setScalar(0.85);
