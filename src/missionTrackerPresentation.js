@@ -239,6 +239,14 @@ function getMissionCopy(state) {
     }
 
     if (state.rescueState === 'visible') {
+      if (state.planet === 'Frost Pea' && document.body.dataset.surfaceObjective !== 'RESCUE EXPLORER') {
+        const needsPickaxe = document.body.dataset.surfaceObjective === 'FIND PICKAXE';
+        return {
+          title: needsPickaxe ? 'Find the pickaxe' : 'Break the ice column',
+          objective: needsPickaxe ? 'Skate right and collect the pickaxe marker.' : 'Carry the pickaxe to the ice column and keep moving against it to break through.',
+          badge: needsPickaxe ? 'Search' : 'Break ice', step: 3
+        };
+      }
       const distanceHint = state.rescueProgress > 65
         ? `Almost there — keep moving toward the ${rescueRole.toLowerCase()}.`
         : state.rescueProgress > 30

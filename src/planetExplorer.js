@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { surfaceAdventure, SPROUT_LEVEL, CINDER_LEVEL, createSurfaceRun, resolveSurfaceMovement } from './surfaceAdventureState.js';
+import { surfaceAdventure, SPROUT_LEVEL, CINDER_LEVEL, FROST_LEVEL, createSurfaceRun, resolveSurfaceMovement } from './surfaceAdventureState.js';
 import { createSurfaceAdventureView } from './surfaceAdventureView.js';
 
 const canvas = document.querySelector('#scene');
@@ -116,7 +116,7 @@ scene.add(launchSpectators);
 
 const planetSurface = new THREE.Group();
 scene.add(planetSurface);
-const surfaceViews = [SPROUT_LEVEL, CINDER_LEVEL].map(level => createSurfaceAdventureView(createAstronaut, level));
+const surfaceViews = [SPROUT_LEVEL, CINDER_LEVEL, FROST_LEVEL].map(level => createSurfaceAdventureView(createAstronaut, level));
 let surfaceView = surfaceViews[0];
 surfaceViews.forEach(view => scene.add(view.group));
 
@@ -410,9 +410,9 @@ function completeLanding() {
   launchPad.visible = false;
   launchSpectators.visible = false;
   hasLeftLaunchpad = true;
-  surfaceAdventure.enabled = currentPlanetIndex < 2;
+  surfaceAdventure.enabled = currentPlanetIndex < 3;
   surfaceView = surfaceViews[currentPlanetIndex] ?? surfaceViews[0];
-  surfaceAdventure.run = createSurfaceRun(currentPlanetIndex === 1 ? CINDER_LEVEL : SPROUT_LEVEL);
+  surfaceAdventure.run = createSurfaceRun([SPROUT_LEVEL, CINDER_LEVEL, FROST_LEVEL][currentPlanetIndex]);
   surfaceView.group.position.set(lastLandedX, ASTRONAUT_GROUND_Y, 0);
 
   if (!hasSwappedDestinationScene) {
@@ -537,7 +537,8 @@ function updateAstronaut(dt, now) {
 
   jetpackActive = keys.has('Space');
 
-  astronautVelocityX = THREE.MathUtils.lerp(astronautVelocityX, desiredVelocity, 1 - Math.exp(-12 * dt));
+  const movementResponse = surfaceAdventure.active && level.kind === 'ice' ? (direction ? 2.8 : 1.55) : 12;
+  astronautVelocityX = THREE.MathUtils.lerp(astronautVelocityX, desiredVelocity, 1 - Math.exp(-movementResponse * dt));
   astronautVelocityY += (jetpackActive ? JETPACK_THRUST : GRAVITY) * dt;
   astronautVelocityY = THREE.MathUtils.clamp(astronautVelocityY, MAX_FALL_SPEED, MAX_RISE_SPEED);
 
@@ -547,13 +548,15 @@ function updateAstronaut(dt, now) {
     const result = resolveSurfaceMovement(previous, {
       x: previous.x + astronautVelocityX * dt,
       y: Math.min(previous.y + astronautVelocityY * dt, ASTRONAUT_MAX_Y - ASTRONAUT_GROUND_Y)
-    }, level, surfaceAdventure.run.vent.safe);
+    }, level, level.kind === 'ice' ? surfaceAdventure.run.columnBroken : surfaceAdventure.run.vent.safe);
     astronaut.position.x = surfaceView.group.position.x + result.x;
     astronaut.position.y = ASTRONAUT_GROUND_Y + result.y;
     if (result.blockedX) astronautVelocityX = 0;
     if (result.blockedY) astronautVelocityY = 0;
+    const previousObjective = surfaceAdventure.run.objective;
     surfaceAdventure.run.update(dt, result);
     surfaceView.update(surfaceAdventure.run);
+    if (surfaceAdventure.run.objective !== previousObjective) updateUi();
   } else {
     astronaut.position.x = THREE.MathUtils.clamp(astronaut.position.x + astronautVelocityX * dt, -WALK_LIMIT, WALK_LIMIT);
     astronaut.position.y = THREE.MathUtils.clamp(astronaut.position.y + astronautVelocityY * dt, ASTRONAUT_GROUND_Y, ASTRONAUT_MAX_Y);
@@ -1516,6 +1519,7 @@ function updateHud(altitude, throttle, loopStatus) {
 
 function updateUi() {
   document.body.dataset.surfaceAdventure = surfaceAdventure.active ? 'active' : 'inactive';
+  document.body.dataset.surfaceObjective = surfaceAdventure.active ? surfaceAdventure.run.objective : '';
   const current = PLANETS[currentPlanetIndex];
   const target = PLANETS[targetPlanetIndex];
 
@@ -1558,7 +1562,9 @@ function updateUi() {
     helpLabel.textContent = surfaceAdventure.active
       ? surfaceAdventure.run.level.kind === 'steam'
         ? 'A/D: walk · E: board. WAIT for steam to stop → cross on GO → rescue → return left.'
-        : 'A/D: walk · Space: jetpack · E: board. Cross the vines → rescue → return left. Avoid flying too high.'
+        : surfaceAdventure.run.level.kind === 'ice'
+          ? `A/D: skate · E: board. ${surfaceAdventure.run.objective} → rescue → return left.`
+          : 'A/D: walk · Space: jetpack · E: board. Cross the vines → rescue → return left. Avoid flying too high.'
       : 'Walk with A/D or arrows. Hold Space for the jetpack. Stay too high for too long and the black hole resets you to the rocket.';
   }
 }
