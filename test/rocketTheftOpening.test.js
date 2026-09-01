@@ -33,6 +33,21 @@ test('rocket theft starts after surface exit and strands the astronaut without c
   assert.doesNotMatch([THEFT_LEVEL.kind, run.state, run.objective].join(' '), /combat|weapon|damage|life/i);
 });
 
+test('thief crew should disappear into the rocket when launch-away begins', () => {
+  const run = createSurfaceRun(THEFT_LEVEL);
+  run.startTheft();
+  run.update(THEFT_SEQUENCE_SECONDS * THEFT_BOARDING_PROGRESS, { x: 1, y: 0 });
+  assert.equal(run.theftProgress, 0);
+  assert.equal(run.theftBoardingProgress, 1);
+  const visibleBeforeLaunch = run.state === 'stealing' && run.theftProgress <= 0.001;
+  assert.equal(visibleBeforeLaunch, true);
+
+  run.update(THEFT_SEQUENCE_SECONDS * (THEFT_LAUNCH_PROGRESS - THEFT_BOARDING_PROGRESS + 0.03), { x: 1, y: 0 });
+  assert.ok(run.theftProgress > 0);
+  const visibleAfterLaunch = run.state === 'stealing' && run.theftProgress <= 0.001;
+  assert.equal(visibleAfterLaunch, false);
+});
+
 test('theft level preserves side-scroller movement bounds', () => {
   const left = resolveSurfaceMovement({ x: 0, y: 0 }, { x: -99, y: 0 }, THEFT_LEVEL, false);
   const right = resolveSurfaceMovement({ x: 0, y: 0 }, { x: 99, y: 0 }, THEFT_LEVEL, false);
