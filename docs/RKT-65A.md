@@ -27,6 +27,7 @@ The theft timing now separates alien boarding from rocket launch movement:
 
 - `theftBoardingProgress` drives the tiny aliens walking to and boarding the rocket.
 - `theftProgress` stays at zero until the boarding beat is complete.
+- The thief crew remains visible only during the ground boarding phase.
 - Once rocket launch-away begins, the thief crew is hidden so they read as being inside the ship instead of lagging behind as separate surface objects.
 
 ## Guardrails preserved
@@ -51,7 +52,7 @@ The theft timing now separates alien boarding from rocket launch movement:
 9. Confirm the astronaut appears beside the landed rocket.
 10. Confirm tiny mischievous aliens waddle to the rocket while the rocket stays grounded.
 11. Confirm the aliens disappear into the ship before liftoff.
-12. Confirm the rocket flies away and disappears.
+12. Confirm the rocket flies away without visible aliens falling behind it.
 13. Confirm the astronaut remains on Sneakle-5.
 14. Confirm the buttons show the rocket is unavailable and Mission Control says to find another way off.
 15. Walk and jetpack right to confirm stranded exploration scrolls horizontally like the newer planet style.
