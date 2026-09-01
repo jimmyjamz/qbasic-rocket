@@ -11,3 +11,4 @@ import './sessionRewardsPresentation.js';
 import './missionSummaryPresentation.js';
 import './rescueDebugPresentation.js';
 import './missionTrackerPresentation.js';
+import './stationHubPresentation.js';

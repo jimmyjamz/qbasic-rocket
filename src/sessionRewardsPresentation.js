@@ -39,6 +39,8 @@ rewardsText.style.whiteSpace = 'nowrap';
 rewardsCard.appendChild(rewardsText);
 
 function renderRewards() {
+  document.body.dataset.sessionRescues = String(SESSION_REWARD_STATE.rescues);
+  document.body.dataset.sessionBadges = String(SESSION_REWARD_STATE.badges);
   rewardsText.textContent = `Rescues: ${SESSION_REWARD_STATE.rescues}  •  Badges: ${SESSION_REWARD_STATE.badges}`;
 }
 
