@@ -1,4 +1,5 @@
 import './rocketMonkeyWorldGag.js';
+import './rocketTheftOpeningPresentation.js';
 import './planetExplorer.js';
 import './countdownPresentation.js';
 import './launchCrewPresentation.js';
