@@ -14,9 +14,10 @@ single mission flag, not a general inventory: it cannot duplicate, adds exactly
 one badge to the session counter, does not alter rescue rewards, and persists
 only for the browser session.
 
-Returning to Gherkin-7 changes the same mini-level. On exit, the carried item
-translates automatically: the crowd is gone and one world-space alien welcomes
-the astronaut: “Welcome! Please avoid our moon-pickle garden.” The path is open.
+Returning to Gherkin-7 changes the same mini-level. The carried item opens the
+route to the moon-pickle gate. Using it at the gate clears the crowd, after which
+one world-space alien welcomes the astronaut: “Welcome! Please avoid our
+moon-pickle garden.”
 Boarding changes the mission to complete and
 enables station return. The separate First Contact completion reward is added by
 RKT-56.

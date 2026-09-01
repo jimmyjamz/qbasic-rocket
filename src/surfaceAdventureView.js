@@ -129,6 +129,8 @@ export function createSurfaceAdventureView(createAstronaut, level = SPROUT_LEVEL
   }
   const alienCrowd = new THREE.Group();
   const friendlyAlien = createAlien();
+  const gardenGate = new THREE.Group();
+  let gardenSign = null;
   if (contact) {
     [2.6, 3.35, 4.1, 4.85, 5.6, 6.35, 7.1].forEach((x, index) => {
       const alien = createAlien();
@@ -137,9 +139,20 @@ export function createSurfaceAdventureView(createAstronaut, level = SPROUT_LEVEL
       alienCrowd.add(alien);
     });
     group.add(alienCrowd);
-    friendlyAlien.position.set(5.2, 0, 0);
+    friendlyAlien.position.set(level.targetX, 0, 0);
     group.add(friendlyAlien);
-    sign('MOON-PICKLE GARDEN', 9, 2.4, 3.2);
+    const gateMaterial = new THREE.MeshStandardMaterial({ color: 0xc8ff72, emissive: 0x315d16, emissiveIntensity: 0.25 });
+    const postGeometry = new THREE.BoxGeometry(0.22, 2.2, 0.35);
+    for (const offset of [-0.8, 0.8]) {
+      const post = new THREE.Mesh(postGeometry, gateMaterial);
+      post.position.set(level.gateX + offset, 1.05, 0);
+      gardenGate.add(post);
+    }
+    const lintel = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.22, 0.35), gateMaterial);
+    lintel.position.set(level.gateX, 2.1, 0);
+    gardenGate.add(lintel);
+    group.add(gardenGate);
+    gardenSign = sign('MOON-PICKLE GATE · E', level.gateX, 2.7, 3.2);
   }
   const portal = new THREE.Mesh(new THREE.TorusGeometry(0.65, 0.025, 8, 40), glow);
   portal.rotation.x = Math.PI / 2;
@@ -185,8 +198,11 @@ export function createSurfaceAdventureView(createAstronaut, level = SPROUT_LEVEL
         columnSign.visible = run.hasPickaxe && !run.columnBroken;
       }
       if (contact) {
-        alienCrowd.visible = !run.friendly;
-        friendlyAlien.visible = Boolean(run.friendly);
+        const insideGarden = ['garden', 'welcomed'].includes(run.contactStage);
+        alienCrowd.visible = !insideGarden;
+        friendlyAlien.visible = insideGarden;
+        gardenGate.visible = run.contactStage !== 'welcomed';
+        gardenSign.visible = run.contactStage !== 'welcomed';
         alienCrowd.children.forEach((alien, index) => {
           const bob = Math.sin(performance.now() * 0.005 + index) * 0.06;
           // The lead greeter mirrors jetpack height at the boundary so the

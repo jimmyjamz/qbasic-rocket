@@ -355,6 +355,16 @@ function chooseNextPlanet() {
 function handleContextAction() {
   if (flightMode === 'landed') {
     exitRocket();
+  } else if (flightMode === 'walking' && surfaceAdventure.active && surfaceAdventure.run.canEnterGarden) {
+    surfaceAdventure.run.enterGarden();
+    document.body.dataset.contactGarden = 'garden';
+    surfaceView.update(surfaceAdventure.run);
+    updateUi();
+  } else if (flightMode === 'walking' && surfaceAdventure.active && surfaceAdventure.run.canWelcome) {
+    surfaceAdventure.run.welcome();
+    document.body.dataset.contactGarden = 'welcomed';
+    surfaceView.update(surfaceAdventure.run);
+    updateUi();
   } else if (flightMode === 'walking' && canBoardRocket() && !isBlackHoleSequenceActive) {
     enterRocket();
   }
@@ -422,7 +432,13 @@ function completeLanding() {
   surfaceAdventure.enabled = currentPlanetIndex < 4;
   surfaceView = surfaceViews[currentPlanetIndex] ?? surfaceViews[0];
   surfaceAdventure.run = createSurfaceRun([SPROUT_LEVEL, CINDER_LEVEL, FROST_LEVEL, CONTACT_LEVEL][currentPlanetIndex]);
-  surfaceAdventure.run.friendly = currentPlanetIndex === 3 && document.body.dataset.translatorBadge === 'acquired';
+  if (currentPlanetIndex === 3) {
+    surfaceAdventure.run.prepareContact(
+      document.body.dataset.translatorBadge === 'acquired',
+      document.body.dataset.firstContactState === 'complete'
+    );
+    document.body.dataset.contactGarden = surfaceAdventure.run.contactStage;
+  }
   surfaceView.group.position.set(lastLandedX, ASTRONAUT_GROUND_Y, 0);
 
   if (!hasSwappedDestinationScene) {
@@ -558,7 +574,7 @@ function updateAstronaut(dt, now) {
     const result = resolveSurfaceMovement(previous, {
       x: previous.x + astronautVelocityX * dt,
       y: Math.min(previous.y + astronautVelocityY * dt, ASTRONAUT_MAX_Y - ASTRONAUT_GROUND_Y)
-    }, level, level.kind === 'ice' ? surfaceAdventure.run.columnBroken : level.kind === 'aliens' ? surfaceAdventure.run.friendly : surfaceAdventure.run.vent.safe);
+    }, level, level.kind === 'ice' ? surfaceAdventure.run.columnBroken : level.kind === 'aliens' ? surfaceAdventure.run.contactStage !== 'blocked' : surfaceAdventure.run.vent.safe);
     astronaut.position.x = surfaceView.group.position.x + result.x;
     astronaut.position.y = ASTRONAUT_GROUND_Y + result.y;
     if (result.blockedX) astronautVelocityX = 0;
@@ -594,8 +610,9 @@ function updateAstronaut(dt, now) {
 
   const nearRocket = isAstronautNearRocket();
   const boardable = canBoardRocket();
-  actionButton.disabled = !boardable;
-  actionButton.textContent = boardable ? 'Enter rocket (E)' : nearRocket && surfaceAdventure.active && surfaceAdventure.run.level.kind !== 'aliens' && !['rescued', 'boarded'].includes(surfaceAdventure.run.state) ? 'Bring crew to rocket' : nearRocket ? 'Land to enter rocket' : 'Return to rocket';
+  const gardenAction = surfaceAdventure.run.canEnterGarden || surfaceAdventure.run.canWelcome;
+  actionButton.disabled = !boardable && !gardenAction;
+  actionButton.textContent = surfaceAdventure.run.canEnterGarden ? 'Use Translator at gate (E)' : surfaceAdventure.run.canWelcome ? 'Welcome alien (E)' : boardable ? 'Enter rocket (E)' : nearRocket && surfaceAdventure.active && surfaceAdventure.run.level.kind !== 'aliens' && !['rescued', 'boarded'].includes(surfaceAdventure.run.state) ? 'Bring crew to rocket' : nearRocket ? 'Land to enter rocket' : 'Return to rocket';
   loopStatusLabel.textContent = jetpackActive ? 'Jetpack firing' : boardable ? 'Ready to board' : 'Exploring';
   throttleLabel.textContent = jetpackActive ? 'Jetpack' : isGrounded ? 'Suit ready' : 'Coasting';
 }
@@ -1575,7 +1592,10 @@ function updateUi() {
         : surfaceAdventure.run.level.kind === 'ice'
           ? `A/D: skate · E: board. ${surfaceAdventure.run.objective} → rescue → return left.`
           : surfaceAdventure.run.level.kind === 'aliens'
-            ? surfaceAdventure.run.friendly ? 'A/D: explore · E: board. One alien welcomes you: the moon-pickle garden is safe.' : 'A/D: move a few steps · E: board. The aliens crowd the garden path; return for a translator.'
+            ? surfaceAdventure.run.contactStage === 'blocked' ? 'A/D: move a few steps · E: board. The aliens crowd the garden path; return for a translator.'
+              : surfaceAdventure.run.contactStage === 'gate' ? 'A/D: reach the moon-pickle gate · E: use the Translator Badge.'
+                : surfaceAdventure.run.contactStage === 'garden' ? 'A/D: approach the friendly alien · E: say hello.'
+                  : 'First contact complete! Return left to the rocket and press E.'
             : 'A/D: walk · Space: jetpack · E: board. Cross the vines → rescue → return left. Avoid flying too high.'
       : 'Walk with A/D or arrows. Hold Space for the jetpack. Stay too high for too long and the black hole resets you to the rocket.';
   }
