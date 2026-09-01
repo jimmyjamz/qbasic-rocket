@@ -203,7 +203,7 @@ function publishRescueProfile(planet = getPlanet()) {
 }
 
 function isRescueVisibleMode(mode, planet) {
-  return planet !== 'Launchpad' && (mode === 'Landed' || mode === 'Astronaut EVA');
+  return planet !== 'Launchpad' && planet !== 'Gherkin-7' && (mode === 'Landed' || mode === 'Astronaut EVA');
 }
 
 function resetRescueProgress() {

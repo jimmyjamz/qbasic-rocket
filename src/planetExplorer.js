@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { surfaceAdventure, SPROUT_LEVEL, CINDER_LEVEL, FROST_LEVEL, createSurfaceRun, resolveSurfaceMovement } from './surfaceAdventureState.js';
+import { surfaceAdventure, SPROUT_LEVEL, CINDER_LEVEL, FROST_LEVEL, CONTACT_LEVEL, createSurfaceRun, resolveSurfaceMovement } from './surfaceAdventureState.js';
 import { createSurfaceAdventureView } from './surfaceAdventureView.js';
 
 const canvas = document.querySelector('#scene');
@@ -69,6 +69,15 @@ const PLANETS = [
     sky: 0x061022,
     fog: 0.034,
     props: 'ice'
+  },
+  {
+    name: 'Gherkin-7',
+    tagline: 'violet fields and a famous moon-pickle garden',
+    surface: 0x6250a5,
+    accent: 0xc8ff72,
+    sky: 0x120729,
+    fog: 0.029,
+    props: 'crystals'
   }
 ];
 
@@ -116,7 +125,7 @@ scene.add(launchSpectators);
 
 const planetSurface = new THREE.Group();
 scene.add(planetSurface);
-const surfaceViews = [SPROUT_LEVEL, CINDER_LEVEL, FROST_LEVEL].map(level => createSurfaceAdventureView(createAstronaut, level));
+const surfaceViews = [SPROUT_LEVEL, CINDER_LEVEL, FROST_LEVEL, CONTACT_LEVEL].map(level => createSurfaceAdventureView(createAstronaut, level));
 let surfaceView = surfaceViews[0];
 surfaceViews.forEach(view => scene.add(view.group));
 
@@ -258,8 +267,8 @@ function launchToSelectedPlanet() {
   beginLaunchFlight();
 }
 
-export function returnToStation() {
-  if (flightMode !== 'landed' || launchButton.disabled || document.body.dataset.rescueNpcState !== 'boarded') return;
+export function returnToStation(contactReturn = false) {
+  if (flightMode !== 'landed' || launchButton.disabled || (!contactReturn && document.body.dataset.rescueNpcState !== 'boarded')) return;
   returningToStation = true;
   document.body.dataset.stationReturn = 'flying';
   returnOrigin.copy(rocket.position);
@@ -410,9 +419,10 @@ function completeLanding() {
   launchPad.visible = false;
   launchSpectators.visible = false;
   hasLeftLaunchpad = true;
-  surfaceAdventure.enabled = currentPlanetIndex < 3;
+  surfaceAdventure.enabled = currentPlanetIndex < 4;
   surfaceView = surfaceViews[currentPlanetIndex] ?? surfaceViews[0];
-  surfaceAdventure.run = createSurfaceRun([SPROUT_LEVEL, CINDER_LEVEL, FROST_LEVEL][currentPlanetIndex]);
+  surfaceAdventure.run = createSurfaceRun([SPROUT_LEVEL, CINDER_LEVEL, FROST_LEVEL, CONTACT_LEVEL][currentPlanetIndex]);
+  surfaceAdventure.run.friendly = currentPlanetIndex === 3 && document.body.dataset.translatorBadge === 'acquired';
   surfaceView.group.position.set(lastLandedX, ASTRONAUT_GROUND_Y, 0);
 
   if (!hasSwappedDestinationScene) {
@@ -548,7 +558,7 @@ function updateAstronaut(dt, now) {
     const result = resolveSurfaceMovement(previous, {
       x: previous.x + astronautVelocityX * dt,
       y: Math.min(previous.y + astronautVelocityY * dt, ASTRONAUT_MAX_Y - ASTRONAUT_GROUND_Y)
-    }, level, level.kind === 'ice' ? surfaceAdventure.run.columnBroken : surfaceAdventure.run.vent.safe);
+    }, level, level.kind === 'ice' ? surfaceAdventure.run.columnBroken : level.kind === 'aliens' ? surfaceAdventure.run.friendly : surfaceAdventure.run.vent.safe);
     astronaut.position.x = surfaceView.group.position.x + result.x;
     astronaut.position.y = ASTRONAUT_GROUND_Y + result.y;
     if (result.blockedX) astronautVelocityX = 0;
@@ -585,7 +595,7 @@ function updateAstronaut(dt, now) {
   const nearRocket = isAstronautNearRocket();
   const boardable = canBoardRocket();
   actionButton.disabled = !boardable;
-  actionButton.textContent = boardable ? 'Enter rocket (E)' : nearRocket && surfaceAdventure.active && !['rescued', 'boarded'].includes(surfaceAdventure.run.state) ? 'Bring crew to rocket' : nearRocket ? 'Land to enter rocket' : 'Return to rocket';
+  actionButton.textContent = boardable ? 'Enter rocket (E)' : nearRocket && surfaceAdventure.active && surfaceAdventure.run.level.kind !== 'aliens' && !['rescued', 'boarded'].includes(surfaceAdventure.run.state) ? 'Bring crew to rocket' : nearRocket ? 'Land to enter rocket' : 'Return to rocket';
   loopStatusLabel.textContent = jetpackActive ? 'Jetpack firing' : boardable ? 'Ready to board' : 'Exploring';
   throttleLabel.textContent = jetpackActive ? 'Jetpack' : isGrounded ? 'Suit ready' : 'Coasting';
 }
@@ -757,7 +767,7 @@ function isAstronautNearRocket() {
 }
 
 function canBoardRocket() {
-  if (surfaceAdventure.active && !['rescued', 'boarded'].includes(surfaceAdventure.run.state)) return false;
+  if (surfaceAdventure.active && surfaceAdventure.run.level.kind !== 'aliens' && !['rescued', 'boarded'].includes(surfaceAdventure.run.state)) return false;
   return isAstronautNearRocket() && astronaut.position.y <= ASTRONAUT_GROUND_Y + 0.18;
 }
 
@@ -1564,7 +1574,9 @@ function updateUi() {
         ? 'A/D: walk · E: board. WAIT for steam to stop → cross on GO → rescue → return left.'
         : surfaceAdventure.run.level.kind === 'ice'
           ? `A/D: skate · E: board. ${surfaceAdventure.run.objective} → rescue → return left.`
-          : 'A/D: walk · Space: jetpack · E: board. Cross the vines → rescue → return left. Avoid flying too high.'
+          : surfaceAdventure.run.level.kind === 'aliens'
+            ? surfaceAdventure.run.friendly ? 'A/D: explore · E: board. One alien welcomes you: the moon-pickle garden is safe.' : 'A/D: move a few steps · E: board. The aliens crowd the garden path; return for a translator.'
+            : 'A/D: walk · Space: jetpack · E: board. Cross the vines → rescue → return left. Avoid flying too high.'
       : 'Walk with A/D or arrows. Hold Space for the jetpack. Stay too high for too long and the black hole resets you to the rocket.';
   }
 }

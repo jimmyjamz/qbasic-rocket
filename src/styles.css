@@ -26,6 +26,9 @@ body[data-station-hub="home"] .controls button { padding: 0.6rem 0.8rem; font-si
 #stationHub small, #stationHub h2 span { font-size: 0.7rem; color: #c0c8d8; }
 #stationHub h2 span { margin-left: 0.5rem; font-weight: normal; }
 #stationDestination { font-weight: 800; color: #ffe3a3; }
+#firstContactCard { position: fixed; left: 50%; bottom: 1rem; transform: translateX(-50%); z-index: 15; width: min(27rem, calc(100vw - 2rem)); padding: 0.7rem 0.9rem; border: 1px solid #c8ff7288; border-radius: 1rem; background: #170b2ee8; text-align: center; box-shadow: 0 18px 48px #0008; }
+#firstContactCard strong { color: #dfff9c; font-size: 1.05rem; }
+#firstContactCard p { margin: 0.35rem 0; font-size: 0.85rem; }
 
 /* Make room for the authored trail without changing the flight/station HUD. */
 body[data-surface-adventure="active"] .hero-card {

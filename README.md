@@ -101,6 +101,13 @@ are available yet. See [hub validation notes](docs/RKT-55.md).
 The home board appears after station touchdown; **Reset** remains instant.
 See [animated return validation](docs/RKT-63.md).
 
+## Friendly first contact (RKT-54)
+
+Gherkin-7 is the fourth destination. The first noncombat encounter sends the
+player home for one mission-specific Translator Badge; returning reveals that
+the aliens were protecting their moon-pickle garden. This vertical slice records
+peaceful completion but leaves its reward to RKT-56. See [RKT-54 notes](docs/RKT-54.md).
+
 ## Debug configuration
 
 The launch countdown is implemented but skipped by default so repeated testing stays fast.
