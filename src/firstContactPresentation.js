@@ -5,6 +5,7 @@ let visitedWithoutTranslator = false;
 
 document.body.dataset.firstContactState = 'unvisited';
 document.body.dataset.translatorBadge = 'missing';
+document.body.dataset.contactGarden = 'blocked';
 
 const card = document.createElement('aside');
 card.id = 'firstContactCard';
@@ -27,7 +28,7 @@ function render() {
     visitedWithoutTranslator = true;
     state('blocked');
   }
-  if (here && eva && hasTranslator && ['translator-ready', 'return-landing'].includes(current)) state('resolved-eva');
+  if (here && eva && document.body.dataset.contactGarden === 'welcomed' && ['translator-ready', 'return-landing'].includes(current)) state('resolved-eva');
   if (here && landed && visitedWithoutTranslator && !hasTranslator) state('needs-translator');
   if (here && landed && hasTranslator && current === 'translator-ready') state('return-landing');
   if (here && landed && current === 'resolved-eva') state('complete');
@@ -38,10 +39,13 @@ function render() {
   if (!encounter) return;
   const resolved = now === 'resolved-eva' || now === 'complete';
   card.classList.toggle('resolved', resolved);
-  card.querySelector('strong').textContent = resolved ? 'Translation successful!' : hasTranslator ? 'The aliens are signaling again' : 'Aliens surround the rocket!';
-  card.querySelector('p').textContent = resolved
-    ? '“Welcome! Please avoid our moon-pickle garden.” The aliens clear a safe path and wave.'
-    : hasTranslator ? 'Exit the rocket. Your Translator Badge will interpret their welcome automatically.'
+  const contactGarden = document.body.dataset.contactGarden;
+  card.querySelector('strong').textContent = now === 'complete' ? 'Mission complete — First Contact Friend!' : resolved ? 'Translation successful!' : contactGarden === 'garden' ? 'The garden gate opens!' : hasTranslator ? 'Find the moon-pickle garden gate' : 'Aliens surround the rocket!';
+  card.querySelector('p').textContent = now === 'complete'
+    ? 'Peaceful contact recorded. You earned the First Contact Friend badge!'
+    : resolved ? '“Welcome! Please avoid our moon-pickle garden.” Your new alien friend waves.'
+    : contactGarden === 'garden' ? 'The crowd clears. Approach the one alien inside and press E to say hello.'
+    : hasTranslator ? 'Follow the path to the garden gate and press E to use your Translator Badge.'
       : eva ? 'Mission Control: They may be warning us, not attacking. Board the rocket and return for a translator.'
         : 'Their signals are unreadable. Exit carefully; this is a peaceful contact mission.';
   if (help && eva && !hasTranslator) help.textContent = 'The aliens block the garden path. No combat: return to the rocket (E), then fly home for a translator.';
@@ -52,5 +56,5 @@ for (const node of [mode, planet]) {
   observer.observe(node, { childList: true, characterData: true, subtree: true });
 }
 const observer = new MutationObserver(render);
-observer.observe(document.body, { attributes: true, attributeFilter: ['data-translator-badge'] });
+observer.observe(document.body, { attributes: true, attributeFilter: ['data-translator-badge', 'data-contact-garden'] });
 render();

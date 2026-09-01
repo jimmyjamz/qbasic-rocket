@@ -125,21 +125,56 @@ export function createSurfaceAdventureView(createAstronaut, level = SPROUT_LEVEL
       eye.position.set(x, 1.13, 0.27);
       alien.add(eye);
     }
+    for (const side of [-1, 1]) {
+      const arm = new THREE.Group();
+      arm.name = side < 0 ? 'leftAlienArm' : 'rightAlienArm';
+      arm.position.set(side * 0.27, 0.73, 0);
+      const limb = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.04, 0.42, 8), green);
+      limb.position.y = -0.19;
+      arm.add(limb);
+      const palm = new THREE.Mesh(new THREE.SphereGeometry(0.085, 10, 8), green);
+      palm.scale.set(0.85, 0.65, 0.75);
+      palm.position.y = -0.42;
+      arm.add(palm);
+      for (let finger = -1; finger <= 1; finger++) {
+        const digit = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.02, 0.16, 6), green);
+        digit.position.set(finger * 0.045, -0.52, 0);
+        digit.rotation.z = finger * 0.32;
+        arm.add(digit);
+      }
+      arm.rotation.z = side * 0.38;
+      alien.add(arm);
+    }
     return alien;
   }
   const alienCrowd = new THREE.Group();
   const friendlyAlien = createAlien();
+  const gardenGate = new THREE.Group();
+  let gardenSign = null;
   if (contact) {
-    [2.6, 3.35, 4.1, 4.85, 5.6, 6.35, 7.1].forEach((x, index) => {
+    [3.6, 4.25, 4.9, 5.55, 6.2, 6.85, 7.5].forEach((x, index) => {
       const alien = createAlien();
       alien.position.set(x, 0, index % 2 ? 0.35 : -0.2);
+      alien.userData.crowdHome = { x, z: alien.position.z };
+      alien.userData.crowdPhase = index * 1.37;
       alien.scale.setScalar(0.9 + (index % 3) * 0.08);
       alienCrowd.add(alien);
     });
     group.add(alienCrowd);
-    friendlyAlien.position.set(5.2, 0, 0);
+    friendlyAlien.position.set(level.targetX, 0, 0);
     group.add(friendlyAlien);
-    sign('MOON-PICKLE GARDEN', 9, 2.4, 3.2);
+    const gateMaterial = new THREE.MeshStandardMaterial({ color: 0xc8ff72, emissive: 0x315d16, emissiveIntensity: 0.25 });
+    const postGeometry = new THREE.BoxGeometry(0.22, 2.2, 0.35);
+    for (const offset of [-0.8, 0.8]) {
+      const post = new THREE.Mesh(postGeometry, gateMaterial);
+      post.position.set(level.gateX + offset, 1.05, 0);
+      gardenGate.add(post);
+    }
+    const lintel = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.22, 0.35), gateMaterial);
+    lintel.position.set(level.gateX, 2.1, 0);
+    gardenGate.add(lintel);
+    group.add(gardenGate);
+    gardenSign = sign('MOON-PICKLE GATE · E', level.gateX, 2.7, 3.2);
   }
   const portal = new THREE.Mesh(new THREE.TorusGeometry(0.65, 0.025, 8, 40), glow);
   portal.rotation.x = Math.PI / 2;
@@ -185,15 +220,34 @@ export function createSurfaceAdventureView(createAstronaut, level = SPROUT_LEVEL
         columnSign.visible = run.hasPickaxe && !run.columnBroken;
       }
       if (contact) {
-        alienCrowd.visible = !run.friendly;
-        friendlyAlien.visible = Boolean(run.friendly);
+        const insideGarden = ['garden', 'welcomed'].includes(run.contactStage);
+        alienCrowd.visible = !insideGarden;
+        friendlyAlien.visible = insideGarden;
+        gardenGate.visible = run.contactStage !== 'welcomed';
+        gardenSign.visible = run.contactStage !== 'welcomed';
         alienCrowd.children.forEach((alien, index) => {
-          const bob = Math.sin(performance.now() * 0.005 + index) * 0.06;
+          const time = performance.now() * 0.001;
+          const phase = alien.userData.crowdPhase;
+          const home = alien.userData.crowdHome;
+          const shuffle = Math.sin(time * (4.2 + index * 0.13) + phase);
+          const surge = Math.sin(time * 2.3 + phase * 1.7);
+          const hop = Math.abs(Math.sin(time * (5.5 + index * 0.2) + phase)) * (index % 2 ? 0.12 : 0.2);
+          alien.position.x = home.x + shuffle * 0.18 + surge * 0.08;
+          alien.position.z = home.z + Math.cos(time * 3.1 + phase) * 0.18;
+          alien.rotation.z = shuffle * (index % 2 ? 0.2 : -0.2);
+          alien.rotation.y = Math.sin(time * 2.8 + phase) * 0.18;
+          const leftArm = alien.getObjectByName('leftAlienArm');
+          const rightArm = alien.getObjectByName('rightAlienArm');
+          leftArm.rotation.z = -0.38 - Math.sin(time * 6.1 + phase) * 0.28;
+          rightArm.rotation.z = 0.38 + Math.cos(time * 5.4 + phase) * 0.28;
           // The lead greeter mirrors jetpack height at the boundary so the
           // all-altitude crowd collision is visible rather than an unseen wall.
-          alien.position.y = index === 0 ? Math.max(bob, run.player.y) : bob;
+          alien.position.y = index === 0 ? Math.max(hop, run.player.y) : hop;
         });
-        friendlyAlien.rotation.z = Math.sin(performance.now() * 0.006) * 0.08;
+        const friendlyTime = performance.now() * 0.001;
+        friendlyAlien.rotation.z = Math.sin(friendlyTime * 3) * 0.055;
+        friendlyAlien.getObjectByName('leftAlienArm').rotation.z = -0.42;
+        friendlyAlien.getObjectByName('rightAlienArm').rotation.z = 2.05 + Math.sin(friendlyTime * 7) * 0.22;
       }
       vortexStart = null;
       npc.scale.setScalar(0.85);

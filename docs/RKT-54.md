@@ -8,18 +8,27 @@ can move a few steps in either direction, but cannot pass the crowd
 into the garden. Mission Control explains their signals may be warnings and
 directs the astronaut back aboard.
 
+The crowd uses staggered hops, nervous shuffling, uneven leaning, and small
+forward/back surges to communicate visible confusion and discomfort. After the
+translator clears the misunderstanding, the single garden keeper uses a slower,
+calmer wave so the emotional change reads without dialogue or combat.
+Each alien has thin arms, small palms, and three long fingers. The crowd gestures
+unevenly with both hands, while the garden keeper raises one hand in a friendly
+wave.
+
 After boarding, Return to station uses the established animated flight. The
 station supply stop then exposes one Collect Translator Badge action. This is a
 single mission flag, not a general inventory: it cannot duplicate, adds exactly
 one badge to the session counter, does not alter rescue rewards, and persists
 only for the browser session.
 
-Returning to Gherkin-7 changes the same mini-level. On exit, the carried item
-translates automatically: the crowd is gone and one world-space alien welcomes
-the astronaut: “Welcome! Please avoid our moon-pickle garden.” The path is open.
+Returning to Gherkin-7 changes the same mini-level. The carried item opens the
+route to the moon-pickle gate. Using it at the gate clears the crowd, after which
+one world-space alien welcomes the astronaut: “Welcome! Please avoid our
+moon-pickle garden.”
 Boarding changes the mission to complete and
-enables station return. Peaceful resolution grants no second First Contact
-reward; RKT-56 owns that future reward.
+enables station return. The separate First Contact completion reward is added by
+RKT-56.
 
 Reset remains an immediate station return and preserves current session mission
 progress, consistent with badges and the existing hub. Reload starts a fresh
@@ -56,4 +65,5 @@ passenger.
    the Translator Badge. Launch a rescue planet and check its normal flow still
    works.
 
-Next: RKT-56 adds the First Contact reward. RKT-61 remains deferred.
+RKT-56 adds the First Contact reward on top of this slice. RKT-61 remains
+deferred.

@@ -151,6 +151,9 @@ function getMissionCopy(state) {
   }
 
   if (state.mode === 'Landed') {
+    if (state.planet === 'Gherkin-7' && document.body.dataset.firstContactState === 'complete') {
+      return { title: 'First contact complete', objective: 'First Contact Friend earned! Return to the station or continue exploring.', badge: 'Friend', step: 3 };
+    }
     if (state.rescueState === 'boarded') {
       return {
         title: 'Mission handoff complete',
@@ -212,6 +215,14 @@ function getMissionCopy(state) {
         badge: 'Vortex',
         step: 3
       };
+    }
+
+    if (state.planet === 'Gherkin-7') {
+      const stage = document.body.dataset.contactGarden;
+      if (stage === 'blocked') return { title: 'Aliens block the route', objective: 'Return to the rocket and fly home for a translator.', badge: 'Retreat', step: 2 };
+      if (stage === 'gate') return { title: 'Reach the moon-pickle gate', objective: 'Follow the path right. At the glowing gate, press E to use the Translator Badge.', badge: 'Translate', step: 3 };
+      if (stage === 'garden') return { title: 'Meet the garden keeper', objective: 'Approach the one friendly alien and press E to say hello.', badge: 'Hello', step: 3 };
+      if (stage === 'welcomed') return { title: 'Peaceful contact made', objective: 'Return left to the rocket and press E to complete the mission.', badge: 'Complete', step: 3 };
     }
 
     if (state.rescueState === 'rescued') {
@@ -320,7 +331,9 @@ bodyObserver.observe(document.body, {
     'data-rescue-npc-state',
     'data-rescue-npc-progress',
     'data-rescue-npc-return-progress',
-    'data-rescue-npc-role'
+    'data-rescue-npc-role',
+    'data-contact-garden',
+    'data-first-contact-state'
   ]
 });
 

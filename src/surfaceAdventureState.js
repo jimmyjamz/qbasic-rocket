@@ -16,7 +16,7 @@ export const FROST_LEVEL = Object.freeze({
 });
 export const CONTACT_LEVEL = Object.freeze({
   kind: 'aliens', name: 'Gherkin-7', npcLabel: 'WELCOME, FRIEND',
-  minX: -2, maxX: 14, targetX: 12, obstacleLeft: 3.2, obstacleRight: 4,
+  minX: -2, maxX: 14, targetX: 11.5, gateX: 8.5, obstacleLeft: 2.7, obstacleRight: 3.5,
   obstacleHeight: 0, radius: 0.24
 });
 
@@ -58,6 +58,7 @@ export function createSurfaceRun(level = SPROUT_LEVEL) {
   let hasPickaxe = false;
   let columnBroken = false;
   let breakProgress = 0;
+  let contactStage = 'blocked';
   const run = {
     level,
     get hasPickaxe() { return hasPickaxe; },
@@ -65,6 +66,14 @@ export function createSurfaceRun(level = SPROUT_LEVEL) {
     get breakProgress() { return breakProgress; },
     get objective() { return columnBroken ? 'RESCUE EXPLORER' : hasPickaxe ? 'BREAK ICE COLUMN' : 'FIND PICKAXE'; },
     get vent() { return steamPhase(ventClock); },
+    get contactStage() { return contactStage; },
+    get canEnterGarden() { return level.kind === 'aliens' && contactStage === 'gate' && Math.abs(run.player.x - level.gateX) < 1.6 && run.player.y < 0.75; },
+    get canWelcome() { return level.kind === 'aliens' && contactStage === 'garden' && Math.abs(run.player.x - level.targetX) < 1.25 && run.player.y < 0.75; },
+    prepareContact(hasTranslator, completed = false) {
+      contactStage = completed ? 'welcomed' : hasTranslator ? 'gate' : 'blocked';
+    },
+    enterGarden() { if (run.canEnterGarden) contactStage = 'garden'; },
+    welcome() { if (run.canWelcome) contactStage = 'welcomed'; },
     tick(dt, player) {
       if (level.kind !== 'steam') return;
       const occupied = (point) => point.x > level.obstacleLeft - level.radius + 0.001 && point.x < level.obstacleRight + level.radius - 0.001;
@@ -87,6 +96,7 @@ export function createSurfaceRun(level = SPROUT_LEVEL) {
       hasPickaxe = false;
       columnBroken = false;
       breakProgress = 0;
+      contactStage = 'blocked';
     },
     update(dt, player) {
       clock += dt;

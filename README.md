@@ -106,7 +106,8 @@ See [animated return validation](docs/RKT-63.md).
 Gherkin-7 is the fourth destination. The first noncombat encounter sends the
 player home for one mission-specific Translator Badge; returning reveals that
 the aliens were protecting their moon-pickle garden. This vertical slice records
-peaceful completion but leaves its reward to RKT-56. See [RKT-54 notes](docs/RKT-54.md).
+peaceful completion and earns a visible First Contact Friend reward. See
+[RKT-54 notes](docs/RKT-54.md) and [RKT-56 notes](docs/RKT-56.md).
 
 ## Debug configuration
 
