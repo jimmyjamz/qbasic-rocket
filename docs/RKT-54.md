@@ -1,18 +1,20 @@
 # RKT-54 — Friendly First Contact vertical slice
 
-Gherkin-7 is a fourth, purple-and-lime destination separate from the three rescue
-levels. On the first visit, a lively alien group surrounds the rocket. They block
-the garden route without combat. Mission Control explains that their signals may
-be warnings and directs the astronaut back aboard.
+Gherkin-7 is a fourth, purple-and-lime authored mini-level separate from the three
+rescue levels. On the first visit, seven world-space aliens crowd the rocket door.
+The astronaut can move a few steps in either direction, but cannot pass the crowd
+into the garden. Mission Control explains their signals may be warnings and
+directs the astronaut back aboard.
 
 After boarding, Return to station uses the established animated flight. The
 station supply stop then exposes one Collect Translator Badge action. This is a
 single mission flag, not a general inventory: it cannot duplicate, does not alter
 rescue rewards, and persists only for the browser session.
 
-Returning to Gherkin-7 changes the encounter. Exit, use the translator, and the
-aliens explain: “Welcome! Please avoid our moon-pickle garden.” They spread out,
-wave and allow peaceful completion. Boarding changes the mission to complete and
+Returning to Gherkin-7 changes the same mini-level. On exit, the carried item
+translates automatically: the crowd is gone and one world-space alien welcomes
+the astronaut: “Welcome! Please avoid our moon-pickle garden.” The path is open.
+Boarding changes the mission to complete and
 enables station return. RKT-54 grants no First Contact reward; RKT-56 owns that.
 
 Reset remains an immediate station return and preserves current session mission
@@ -40,8 +42,8 @@ shows a passenger.
 2. Board and Return to station. Confirm zero rescue/passenger/reward changes.
 3. Collect Translator Badge at Supply stop. The button disappears and status
    changes to Translator aboard. Try Reset: it must remain collected.
-4. Choose Gherkin-7 again, fly back and exit. Use Translator Badge.
-5. Confirm aliens spread out/wave and the moon-pickle garden explanation appears.
+4. Choose Gherkin-7 again, fly back and exit. Translation should be automatic.
+5. Confirm only one welcoming alien remains, the path is open, and the moon-pickle garden explanation appears.
    Board, confirm mission complete and return home.
 6. Confirm rescues and Space Hero badges did not increment. Launch a rescue
    planet and check its normal flow still works.
