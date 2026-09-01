@@ -79,16 +79,17 @@ function readState() {
 }
 
 function shouldShowSummary(state) {
-  return state.rescueState === 'boarded' && state.mode === 'Landed';
+  return (state.rescueState === 'boarded' || document.body.dataset.firstContactState === 'complete') && state.mode === 'Landed';
 }
 
 function renderSummary() {
   const state = readState();
   summaryVisible = shouldShowSummary(state);
 
-  summaryTitle.textContent = `${state.role} secured`;
-  checklistItems[0].textContent = `✓ Rescue completed on ${state.planet}`;
-  checklistItems[1].textContent = '✓ Space Hero badge earned';
+  const contactComplete = document.body.dataset.firstContactState === 'complete';
+  summaryTitle.textContent = contactComplete ? 'Peaceful first contact complete' : `${state.role} secured`;
+  checklistItems[0].textContent = contactComplete ? '✓ Alien welcome translated' : `✓ Rescue completed on ${state.planet}`;
+  checklistItems[1].textContent = contactComplete ? '✓ First Contact Friend badge earned' : '✓ Space Hero badge earned';
   checklistItems[2].textContent = `Next: ${state.launchAction.match(/^(Launch|Fly)/i) ? state.launchAction : 'Fly to the next planet'}`;
 
   summaryCard.setAttribute('aria-hidden', summaryVisible ? 'false' : 'true');
@@ -99,7 +100,7 @@ function renderSummary() {
 const bodyObserver = new MutationObserver(renderSummary);
 bodyObserver.observe(document.body, {
   attributes: true,
-  attributeFilter: ['data-rescue-npc-state', 'data-rescue-npc-role', 'data-rescue-npc-planet']
+  attributeFilter: ['data-rescue-npc-state', 'data-rescue-npc-role', 'data-rescue-npc-planet', 'data-first-contact-state', 'data-first-contact-badge']
 });
 
 [modeLabel, launchButton].forEach((label) => {

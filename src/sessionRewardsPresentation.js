@@ -2,7 +2,8 @@ const SESSION_REWARD_STATE = {
   rescues: 0,
   badges: 0,
   countedCurrentRescue: false,
-  countedTranslator: false
+  countedTranslator: false,
+  countedFirstContact: false
 };
 
 const rewardsCard = document.createElement('div');
@@ -69,13 +70,21 @@ function updateRewardsFromRescueState() {
     window.setTimeout(() => { rewardsCard.style.transform = 'scale(1)'; }, 220);
   }
 
+  if (document.body.dataset.firstContactState === 'complete' && !SESSION_REWARD_STATE.countedFirstContact) {
+    SESSION_REWARD_STATE.badges += 1;
+    SESSION_REWARD_STATE.countedFirstContact = true;
+    document.body.dataset.firstContactBadge = 'earned';
+    rewardsCard.style.transform = 'scale(1.08)';
+    window.setTimeout(() => { rewardsCard.style.transform = 'scale(1)'; }, 220);
+  }
+
   renderRewards();
 }
 
 const observer = new MutationObserver(updateRewardsFromRescueState);
 observer.observe(document.body, {
   attributes: true,
-  attributeFilter: ['data-rescue-npc-state', 'data-translator-badge']
+  attributeFilter: ['data-rescue-npc-state', 'data-translator-badge', 'data-first-contact-state']
 });
 
 renderRewards();

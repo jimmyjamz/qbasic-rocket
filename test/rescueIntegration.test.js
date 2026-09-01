@@ -340,7 +340,10 @@ test('full app: surface rescue, rewards, reboarding, planet service, other plane
     $('#actionButton').click();
     await advance(0.1);
     assert.equal(document.body.dataset.firstContactState, 'complete');
-    assert.equal(document.body.dataset.sessionBadges, rewardsAfterTranslator, 'resolution adds no RKT-56 reward yet');
+    assert.equal(document.body.dataset.firstContactBadge, 'earned');
+    assert.equal(document.body.dataset.sessionBadges, String(Number(rewardsAfterTranslator) + 1), 'peaceful completion adds one First Contact Friend badge');
+    assert.match(document.body.textContent, /Peaceful first contact complete/);
+    assert.match(document.body.textContent, /First Contact Friend badge earned/);
     assert.equal($('#stationReturnButton').hidden, false);
   } finally {
     dom.window.close();

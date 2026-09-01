@@ -77,7 +77,8 @@ function renderHub() {
   setText('#stationObjective', missions[target] ?? 'Choose a destination for your next rescue.');
   const rescues = Number(document.body.dataset.sessionRescues ?? 0);
   const badges = Number(document.body.dataset.sessionBadges ?? 0);
-  setText('#stationRewards', `${rescues} rescues · ${badges} Space Hero badges${badges ? ' — welcome home, hero!' : ' — your first rescue awaits!'}`);
+  const contactBadge = document.body.dataset.firstContactBadge === 'earned';
+  setText('#stationRewards', `${rescues} rescues · ${badges} Space Hero badges${contactBadge ? ' · First Contact Friend earned!' : badges ? ' — welcome home, hero!' : ' — your first rescue awaits!'}`);
   const atSupply = document.body.dataset.firstContactState === 'at-supply';
   const translatorReady = document.body.dataset.translatorBadge === 'acquired';
   translatorButton.hidden = !atSupply;
@@ -89,5 +90,5 @@ for (const node of [mode, launch, document.querySelector('#planetName')]) {
   uiObserver.observe(node, { childList: true, characterData: true, subtree: true, attributes: true, attributeFilter: ['disabled'] });
 }
 const rewardObserver = new MutationObserver(renderHub);
-rewardObserver.observe(document.body, { attributes: true, attributeFilter: ['data-session-rescues', 'data-session-badges', 'data-rescue-npc-state', 'data-first-contact-state', 'data-translator-badge'] });
+rewardObserver.observe(document.body, { attributes: true, attributeFilter: ['data-session-rescues', 'data-session-badges', 'data-rescue-npc-state', 'data-first-contact-state', 'data-first-contact-badge', 'data-translator-badge'] });
 renderHub();

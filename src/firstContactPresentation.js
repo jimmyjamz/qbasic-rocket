@@ -38,9 +38,10 @@ function render() {
   if (!encounter) return;
   const resolved = now === 'resolved-eva' || now === 'complete';
   card.classList.toggle('resolved', resolved);
-  card.querySelector('strong').textContent = resolved ? 'Translation successful!' : hasTranslator ? 'The aliens are signaling again' : 'Aliens surround the rocket!';
-  card.querySelector('p').textContent = resolved
-    ? '“Welcome! Please avoid our moon-pickle garden.” The aliens clear a safe path and wave.'
+  card.querySelector('strong').textContent = now === 'complete' ? 'Mission complete — First Contact Friend!' : resolved ? 'Translation successful!' : hasTranslator ? 'The aliens are signaling again' : 'Aliens surround the rocket!';
+  card.querySelector('p').textContent = now === 'complete'
+    ? 'Peaceful contact recorded. You earned the First Contact Friend badge!'
+    : resolved ? '“Welcome! Please avoid our moon-pickle garden.” The aliens clear a safe path and wave.'
     : hasTranslator ? 'Exit the rocket. Your Translator Badge will interpret their welcome automatically.'
       : eva ? 'Mission Control: They may be warning us, not attacking. Board the rocket and return for a translator.'
         : 'Their signals are unreadable. Exit carefully; this is a peaceful contact mission.';
