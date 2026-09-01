@@ -25,7 +25,9 @@ export const THEFT_LEVEL = Object.freeze({
   obstacleHeight: 0, radius: 0.24
 });
 
-const THEFT_SEQUENCE_SECONDS = 2.8;
+export const THEFT_SEQUENCE_SECONDS = 4.2;
+export const THEFT_BOARDING_PROGRESS = 0.58;
+export const THEFT_LAUNCH_PROGRESS = 0.68;
 
 export function steamPhase(clock) {
   const phase = clock % 11;
