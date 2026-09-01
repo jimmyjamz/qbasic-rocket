@@ -39,13 +39,11 @@ test('thief crew should disappear into the rocket when launch-away begins', () =
   run.update(THEFT_SEQUENCE_SECONDS * THEFT_BOARDING_PROGRESS, { x: 1, y: 0 });
   assert.equal(run.theftProgress, 0);
   assert.equal(run.theftBoardingProgress, 1);
-  const visibleBeforeLaunch = run.state === 'stealing' && run.theftProgress <= 0.001;
-  assert.equal(visibleBeforeLaunch, true);
+  assert.equal(run.state === 'stealing' && run.theftProgress <= 0.001, true);
 
   run.update(THEFT_SEQUENCE_SECONDS * (THEFT_LAUNCH_PROGRESS - THEFT_BOARDING_PROGRESS + 0.03), { x: 1, y: 0 });
   assert.ok(run.theftProgress > 0);
-  const visibleAfterLaunch = run.state === 'stealing' && run.theftProgress <= 0.001;
-  assert.equal(visibleAfterLaunch, false);
+  assert.equal(run.state === 'stealing' && run.theftProgress <= 0.001, false);
 });
 
 test('theft level preserves side-scroller movement bounds', () => {
