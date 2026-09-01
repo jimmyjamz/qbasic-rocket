@@ -19,6 +19,13 @@ export const CONTACT_LEVEL = Object.freeze({
   minX: -2, maxX: 14, targetX: 11.5, gateX: 8.5, obstacleLeft: 2.7, obstacleRight: 3.5,
   obstacleHeight: 0, radius: 0.24
 });
+export const THEFT_LEVEL = Object.freeze({
+  kind: 'theft', name: 'Sneakle-5', npcLabel: 'FIND ANOTHER WAY OFF →',
+  minX: -2, maxX: 24, targetX: 18, obstacleLeft: 99, obstacleRight: 100,
+  obstacleHeight: 0, radius: 0.24
+});
+
+const THEFT_SEQUENCE_SECONDS = 2.8;
 
 export function steamPhase(clock) {
   const phase = clock % 11;
@@ -59,14 +66,23 @@ export function createSurfaceRun(level = SPROUT_LEVEL) {
   let columnBroken = false;
   let breakProgress = 0;
   let contactStage = 'blocked';
+  let theftProgress = 0;
   const run = {
     level,
     get hasPickaxe() { return hasPickaxe; },
     get columnBroken() { return columnBroken; },
     get breakProgress() { return breakProgress; },
-    get objective() { return columnBroken ? 'RESCUE EXPLORER' : hasPickaxe ? 'BREAK ICE COLUMN' : 'FIND PICKAXE'; },
+    get objective() {
+      if (level.kind === 'theft') {
+        if (run.state === 'stealing') return 'ROCKET THEFT!';
+        if (run.state === 'stranded') return 'FIND ANOTHER WAY OFF';
+        return 'SCOUT LANDING ZONE';
+      }
+      return columnBroken ? 'RESCUE EXPLORER' : hasPickaxe ? 'BREAK ICE COLUMN' : 'FIND PICKAXE';
+    },
     get vent() { return steamPhase(ventClock); },
     get contactStage() { return contactStage; },
+    get theftProgress() { return theftProgress; },
     get canEnterGarden() { return level.kind === 'aliens' && contactStage === 'gate' && Math.abs(run.player.x - level.gateX) < 1.6 && run.player.y < 0.75; },
     get canWelcome() { return level.kind === 'aliens' && contactStage === 'garden' && Math.abs(run.player.x - level.targetX) < 1.25 && run.player.y < 0.75; },
     prepareContact(hasTranslator, completed = false) {
@@ -74,6 +90,12 @@ export function createSurfaceRun(level = SPROUT_LEVEL) {
     },
     enterGarden() { if (run.canEnterGarden) contactStage = 'garden'; },
     welcome() { if (run.canWelcome) contactStage = 'welcomed'; },
+    startTheft() {
+      if (level.kind === 'theft' && run.state === 'visible') {
+        run.state = 'stealing';
+        theftProgress = 0;
+      }
+    },
     tick(dt, player) {
       if (level.kind !== 'steam') return;
       const occupied = (point) => point.x > level.obstacleLeft - level.radius + 0.001 && point.x < level.obstacleRight + level.radius - 0.001;
@@ -97,10 +119,19 @@ export function createSurfaceRun(level = SPROUT_LEVEL) {
       columnBroken = false;
       breakProgress = 0;
       contactStage = 'blocked';
+      theftProgress = 0;
     },
     update(dt, player) {
       clock += dt;
       run.player = { x: player.x, y: player.y };
+      if (level.kind === 'theft') {
+        if (run.state === 'stealing') {
+          theftProgress = Math.min(1, theftProgress + dt / THEFT_SEQUENCE_SECONDS);
+          run.progress = Math.round(theftProgress * 100);
+          if (theftProgress >= 1) run.state = 'stranded';
+        }
+        return;
+      }
       if (level.kind === 'aliens') return;
       if (level.kind === 'ice') {
         if (!hasPickaxe && Math.abs(player.x - level.pickaxeX) < 0.7 && player.y < 0.75) hasPickaxe = true;
