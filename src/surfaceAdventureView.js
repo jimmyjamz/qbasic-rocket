@@ -309,15 +309,16 @@ export function createSurfaceAdventureView(createAstronaut, level = SPROUT_LEVEL
       }
       if (theft) {
         const time = performance.now() * 0.001;
-        const progress = run.theftProgress ?? 0;
-        const dash = THREE.MathUtils.smoothstep(progress, 0, 0.35);
+        const progress = run.theftBoardingProgress ?? run.theftProgress ?? 0;
+        const dash = THREE.MathUtils.smoothstep(progress, 0.08, 1);
         thiefCrew.visible = run.state === 'stealing';
         thiefCrew.children.forEach((alien, index) => {
           const hop = Math.abs(Math.sin(time * (6.4 + index * 0.2) + alien.userData.phase)) * 0.16;
           alien.position.x = THREE.MathUtils.lerp(alien.userData.homeX, 0.12 + index * 0.08, dash);
-          alien.position.y = hop + (dash > 0.94 ? 0.72 + index * 0.14 : 0);
+          const boarded = dash > 0.94;
+          alien.position.y = hop + (boarded ? 0.72 + index * 0.14 : 0);
           alien.rotation.z = Math.sin(time * 7.3 + index) * 0.18;
-          alien.visible = progress < 0.55;
+          alien.visible = run.state === 'stealing' && run.theftProgress < 0.28;
         });
         group.children.forEach((child) => {
           if (child.userData?.phase === undefined) return;
