@@ -1,11 +1,19 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { THEFT_LEVEL, createSurfaceRun, resolveSurfaceMovement } from '../src/surfaceAdventureState.js';
+import {
+  THEFT_LEVEL,
+  THEFT_BOARDING_PROGRESS,
+  THEFT_LAUNCH_PROGRESS,
+  THEFT_SEQUENCE_SECONDS,
+  createSurfaceRun,
+  resolveSurfaceMovement
+} from '../src/surfaceAdventureState.js';
 
 test('Sneakle is a normal surface level, not a sidecar planet', () => {
   assert.equal(THEFT_LEVEL.name, 'Sneakle-5');
   assert.equal(THEFT_LEVEL.kind, 'theft');
   assert.equal(THEFT_LEVEL.maxX, 24);
+  assert.ok(THEFT_BOARDING_PROGRESS < THEFT_LAUNCH_PROGRESS);
 });
 
 test('rocket theft starts after surface exit and strands the astronaut without combat state', () => {
@@ -15,7 +23,11 @@ test('rocket theft starts after surface exit and strands the astronaut without c
   run.startTheft();
   assert.equal(run.state, 'stealing');
   assert.equal(run.objective, 'ROCKET THEFT!');
-  for (let i = 0; i < 240; i += 1) run.update(1 / 60, { x: 1, y: 0 });
+  run.update(THEFT_SEQUENCE_SECONDS * THEFT_BOARDING_PROGRESS, { x: 1, y: 0 });
+  assert.equal(run.state, 'stealing');
+  assert.equal(run.theftProgress, 0);
+  assert.ok(run.theftBoardingProgress >= 1);
+  run.update(THEFT_SEQUENCE_SECONDS, { x: 1, y: 0 });
   assert.equal(run.state, 'stranded');
   assert.equal(run.objective, 'FIND ANOTHER WAY OFF');
   assert.doesNotMatch([THEFT_LEVEL.kind, run.state, run.objective].join(' '), /combat|weapon|damage|life/i);
