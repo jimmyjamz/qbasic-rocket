@@ -1,4 +1,6 @@
 import * as THREE from 'three';
+import { surfaceAdventure, SPROUT_LEVEL, CINDER_LEVEL, createSurfaceRun, resolveSurfaceMovement } from './surfaceAdventureState.js';
+import { createSurfaceAdventureView } from './surfaceAdventureView.js';
 
 const canvas = document.querySelector('#scene');
 const launchButton = document.querySelector('#launchButton');
@@ -114,6 +116,9 @@ scene.add(launchSpectators);
 
 const planetSurface = new THREE.Group();
 scene.add(planetSurface);
+const surfaceViews = [SPROUT_LEVEL, CINDER_LEVEL].map(level => createSurfaceAdventureView(createAstronaut, level));
+let surfaceView = surfaceViews[0];
+surfaceViews.forEach(view => scene.add(view.group));
 
 const destinationOrbs = createDestinationOrbs();
 scene.add(destinationOrbs);
@@ -176,6 +181,7 @@ window.addEventListener('keydown', (event) => {
   if (event.code === 'Space' && flightMode === 'ready') launchToSelectedPlanet();
 });
 window.addEventListener('keyup', (event) => keys.delete(event.code));
+window.addEventListener('blur', () => keys.clear());
 
 resetExperience();
 requestAnimationFrame(animate);
@@ -220,6 +226,11 @@ function animate(now) {
   updateBlackHoleVortex(now, dt);
   updateLaunchSpectators(now, dt);
   updateCamera(dt);
+  if (surfaceAdventure.vortex.active) {
+    const projected = blackHole.position.clone().project(camera);
+    surfaceAdventure.vortex.x = (projected.x + 1) * window.innerWidth / 2;
+    surfaceAdventure.vortex.y = (1 - projected.y) * window.innerHeight / 2;
+  }
   updateDestinationOrbs(now, dt);
   updatePlanetSurface(now, dt);
 
@@ -282,6 +293,7 @@ function updateLaunchCountdown(now) {
 }
 
 function beginLaunchFlight() {
+  leaveSurfaceAdventure();
   if (pendingLaunchTargetIndex !== null) {
     targetPlanetIndex = pendingLaunchTargetIndex;
   }
@@ -340,11 +352,21 @@ function exitRocket() {
   astronautVelocityY = 0;
   jetpackActive = false;
   rocket.rotation.set(0, 0, 0);
+  if (surfaceAdventure.enabled) {
+    surfaceAdventure.active = true;
+    surfaceView.group.visible = true;
+    planetSurface.visible = false;
+    surfaceView.update(surfaceAdventure.run);
+  }
   updateHud(112000, 'Suit ready', 'Exploring');
   updateUi();
 }
 
 function enterRocket() {
+  surfaceAdventure.run.board();
+  surfaceAdventure.active = false;
+  surfaceView.group.visible = false;
+  planetSurface.visible = true;
   resetBlackHoleState();
   resetLaunchCountdownState();
   flightMode = 'landed';
@@ -352,7 +374,7 @@ function enterRocket() {
   astronautVelocityX = 0;
   astronautVelocityY = 0;
   jetpackActive = false;
-  rocket.position.x = THREE.MathUtils.lerp(rocket.position.x, 0, 0.45);
+  if (!surfaceAdventure.enabled) rocket.position.x = THREE.MathUtils.lerp(rocket.position.x, 0, 0.45);
   updateHud(112000, 'Docked', 'Ready for next planet');
   updateUi();
 }
@@ -372,6 +394,10 @@ function completeLanding() {
   launchPad.visible = false;
   launchSpectators.visible = false;
   hasLeftLaunchpad = true;
+  surfaceAdventure.enabled = currentPlanetIndex < 2;
+  surfaceView = surfaceViews[currentPlanetIndex] ?? surfaceViews[0];
+  surfaceAdventure.run = createSurfaceRun(currentPlanetIndex === 1 ? CINDER_LEVEL : SPROUT_LEVEL);
+  surfaceView.group.position.set(lastLandedX, ASTRONAUT_GROUND_Y, 0);
 
   if (!hasSwappedDestinationScene) {
     rebuildPlanetSurface(planet);
@@ -473,7 +499,11 @@ function updateAstronaut(dt, now) {
   const right = keys.has('KeyD') || keys.has('ArrowRight');
   const direction = Number(right) - Number(left);
   const desiredVelocity = direction * WALK_SPEED;
-  const isGrounded = astronaut.position.y <= ASTRONAUT_GROUND_Y + 0.01;
+  const localX = astronaut.position.x - surfaceView.group.position.x;
+  const level = surfaceAdventure.run.level;
+  const onVines = surfaceAdventure.active && level.kind === 'vines' && localX > level.obstacleLeft - level.radius && localX < level.obstacleRight + level.radius;
+  const groundY = ASTRONAUT_GROUND_Y + (onVines ? level.obstacleHeight : 0);
+  const isGrounded = astronaut.position.y <= groundY + 0.01;
 
   jetpackActive = keys.has('Space');
 
@@ -481,8 +511,23 @@ function updateAstronaut(dt, now) {
   astronautVelocityY += (jetpackActive ? JETPACK_THRUST : GRAVITY) * dt;
   astronautVelocityY = THREE.MathUtils.clamp(astronautVelocityY, MAX_FALL_SPEED, MAX_RISE_SPEED);
 
-  astronaut.position.x = THREE.MathUtils.clamp(astronaut.position.x + astronautVelocityX * dt, -WALK_LIMIT, WALK_LIMIT);
-  astronaut.position.y = THREE.MathUtils.clamp(astronaut.position.y + astronautVelocityY * dt, ASTRONAUT_GROUND_Y, ASTRONAUT_MAX_Y);
+  if (surfaceAdventure.active) {
+    const previous = { x: localX, y: astronaut.position.y - ASTRONAUT_GROUND_Y };
+    surfaceAdventure.run.tick(dt, previous);
+    const result = resolveSurfaceMovement(previous, {
+      x: previous.x + astronautVelocityX * dt,
+      y: Math.min(previous.y + astronautVelocityY * dt, ASTRONAUT_MAX_Y - ASTRONAUT_GROUND_Y)
+    }, level, surfaceAdventure.run.vent.safe);
+    astronaut.position.x = surfaceView.group.position.x + result.x;
+    astronaut.position.y = ASTRONAUT_GROUND_Y + result.y;
+    if (result.blockedX) astronautVelocityX = 0;
+    if (result.blockedY) astronautVelocityY = 0;
+    surfaceAdventure.run.update(dt, result);
+    surfaceView.update(surfaceAdventure.run);
+  } else {
+    astronaut.position.x = THREE.MathUtils.clamp(astronaut.position.x + astronautVelocityX * dt, -WALK_LIMIT, WALK_LIMIT);
+    astronaut.position.y = THREE.MathUtils.clamp(astronaut.position.y + astronautVelocityY * dt, ASTRONAUT_GROUND_Y, ASTRONAUT_MAX_Y);
+  }
 
   if (astronaut.position.y <= ASTRONAUT_GROUND_Y + 0.001 && astronautVelocityY < 0) {
     astronaut.position.y = ASTRONAUT_GROUND_Y;
@@ -507,7 +552,7 @@ function updateAstronaut(dt, now) {
   const nearRocket = isAstronautNearRocket();
   const boardable = canBoardRocket();
   actionButton.disabled = !boardable;
-  actionButton.textContent = boardable ? 'Enter rocket (E)' : nearRocket ? 'Land to enter rocket' : 'Return to rocket';
+  actionButton.textContent = boardable ? 'Enter rocket (E)' : nearRocket && surfaceAdventure.active && !['rescued', 'boarded'].includes(surfaceAdventure.run.state) ? 'Bring crew to rocket' : nearRocket ? 'Land to enter rocket' : 'Return to rocket';
   loopStatusLabel.textContent = jetpackActive ? 'Jetpack firing' : boardable ? 'Ready to board' : 'Exploring';
   throttleLabel.textContent = jetpackActive ? 'Jetpack' : isGrounded ? 'Suit ready' : 'Coasting';
 }
@@ -582,6 +627,9 @@ function startBlackHoleSequence(now) {
   );
   blackHole.scale.setScalar(BLACK_HOLE_START_SCALE);
   blackHole.visible = true;
+  surfaceAdventure.vortex.active = true;
+  surfaceAdventure.vortex.progress = 0;
+  if (surfaceAdventure.active) surfaceView.startVortex();
   launchButton.disabled = true;
   actionButton.disabled = true;
   nextButton.disabled = true;
@@ -595,6 +643,8 @@ function updateBlackHoleSequence(dt, now) {
 
   const sequenceProgress = THREE.MathUtils.clamp((now - blackHoleSequenceStart) / BLACK_HOLE_SEQUENCE_MS, 0, 1);
   const eased = easeInOutCubic(sequenceProgress);
+  surfaceAdventure.vortex.progress = sequenceProgress;
+  if (surfaceAdventure.active) surfaceView.updateVortex(sequenceProgress, blackHole.position.clone().sub(surfaceView.group.position));
   const pullStrength = 0.035 + eased * 0.18;
   const spiralWobble = (1 - sequenceProgress) * 0.055;
 
@@ -633,6 +683,10 @@ function updateBlackHoleVortex(now, dt) {
 }
 
 function resetToLastCheckpoint() {
+  surfaceAdventure.active = false;
+  surfaceAdventure.run.reset();
+  surfaceView.group.visible = false;
+  planetSurface.visible = true;
   resetBlackHoleState();
   resetLaunchCountdownState();
   flightMode = 'landed';
@@ -655,6 +709,8 @@ function resetToLastCheckpoint() {
 }
 
 function resetBlackHoleState() {
+  surfaceAdventure.vortex.active = false;
+  surfaceAdventure.vortex.progress = 0;
   blackHoleDangerStart = null;
   blackHoleSequenceStart = null;
   isBlackHoleSequenceActive = false;
@@ -668,7 +724,16 @@ function isAstronautNearRocket() {
 }
 
 function canBoardRocket() {
+  if (surfaceAdventure.active && !['rescued', 'boarded'].includes(surfaceAdventure.run.state)) return false;
   return isAstronautNearRocket() && astronaut.position.y <= ASTRONAUT_GROUND_Y + 0.18;
+}
+
+function leaveSurfaceAdventure() {
+  surfaceAdventure.enabled = false;
+  surfaceAdventure.active = false;
+  surfaceAdventure.run.reset();
+  surfaceView.group.visible = false;
+  planetSurface.visible = hasLeftLaunchpad;
 }
 
 function rebuildPlanetSurface(planet) {
@@ -1387,6 +1452,16 @@ function throttleCurve(progress) {
 }
 
 function updateCamera(dt) {
+  if (surfaceAdventure.active) {
+    const desiredX = surfaceView.group.position.x + THREE.MathUtils.clamp(astronaut.position.x - surfaceView.group.position.x, 2, 19);
+    const alpha = 1 - Math.exp(-4 * dt);
+    camera.position.x = THREE.MathUtils.lerp(camera.position.x, desiredX, alpha);
+    camera.position.y = THREE.MathUtils.lerp(camera.position.y, astronaut.position.y + 2.4, alpha);
+    camera.position.z = THREE.MathUtils.lerp(camera.position.z, 10, alpha);
+    camera.lookAt(camera.position.x, camera.position.y - 0.8, 0);
+    return;
+  }
+  camera.position.z = THREE.MathUtils.lerp(camera.position.z, 12, 1 - Math.exp(-4 * dt));
   const followObject = flightMode === 'walking' ? astronaut : rocket;
   const desiredX = THREE.MathUtils.clamp(followObject.position.x * 0.35, -1.8, 1.8);
   const verticalFollowY = flightMode === 'walking'
@@ -1410,6 +1485,7 @@ function updateHud(altitude, throttle, loopStatus) {
 }
 
 function updateUi() {
+  document.body.dataset.surfaceAdventure = surfaceAdventure.active ? 'active' : 'inactive';
   const current = PLANETS[currentPlanetIndex];
   const target = PLANETS[targetPlanetIndex];
 
@@ -1447,11 +1523,17 @@ function updateUi() {
   } else if (flightMode === 'walking') {
     launchButton.disabled = true;
     nextButton.disabled = true;
-    helpLabel.textContent = 'Walk with A/D or arrows. Hold Space for the jetpack. Stay too high for too long and the black hole resets you to the rocket.';
+    helpLabel.textContent = surfaceAdventure.active
+      ? surfaceAdventure.run.level.kind === 'steam'
+        ? 'A/D: walk · E: board. WAIT for steam to stop → cross on GO → rescue → return left.'
+        : 'A/D: walk · Space: jetpack · E: board. Cross the vines → rescue → return left. Avoid flying too high.'
+      : 'Walk with A/D or arrows. Hold Space for the jetpack. Stay too high for too long and the black hole resets you to the rocket.';
   }
 }
 
 function resetExperience() {
+  leaveSurfaceAdventure();
+  keys.clear();
   currentPlanetIndex = 0;
   targetPlanetIndex = 0;
   launchStart = null;

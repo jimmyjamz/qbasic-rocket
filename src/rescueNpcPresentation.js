@@ -1,4 +1,7 @@
+import { surfaceAdventure } from './surfaceAdventureState.js';
+
 const modeLabel = document.querySelector('#modeName');
+let vortexOverlayStart = null;
 const planetLabel = document.querySelector('#planetName');
 
 const RESCUE_PROFILES = {
@@ -177,6 +180,7 @@ window.addEventListener('keydown', (event) => {
 window.addEventListener('keyup', (event) => {
   rescueState.keys.delete(event.code);
 });
+window.addEventListener('blur', () => rescueState.keys.clear());
 
 function getMode() {
   return modeLabel?.textContent?.trim() ?? '';
@@ -320,6 +324,13 @@ function renderHiddenOverlay() {
 }
 
 function updateRescueBeacon() {
+  if (!surfaceAdventure.vortex.active && vortexOverlayStart) {
+    vortexOverlayStart = null;
+    rescueOverlay.style.left = '';
+    rescueOverlay.style.top = '';
+    rescueOverlay.style.bottom = 'clamp(8.5rem, 24vh, 16rem)';
+    rescueOverlay.style.transition = 'right 420ms ease, opacity 220ms ease, transform 260ms ease';
+  }
   const mode = getMode();
   const planet = getPlanet();
   const now = performance.now();
@@ -347,8 +358,17 @@ function updateRescueBeacon() {
     document.body.dataset.rescueNpcProgress = '100';
     document.body.dataset.rescueNpcReturnProgress = '100';
   } else {
-    updateFindProgress(mode);
-    updateReturnProgress(mode);
+    if (surfaceAdventure.enabled) {
+      const run = surfaceAdventure.run;
+      rescueState.progress = run.progress;
+      rescueState.returnProgress = run.returnProgress;
+      rescueState.located = run.state !== 'visible';
+      rescueState.rescued = run.state === 'rescued' || run.state === 'boarded';
+      rescueState.boarded = run.state === 'boarded';
+    } else if (!surfaceAdventure.vortex.active) {
+      updateFindProgress(mode);
+      updateReturnProgress(mode);
+    }
 
     const datasetState = getDatasetState();
     const following = datasetState === 'following';
@@ -392,6 +412,22 @@ function updateRescueBeacon() {
     document.body.dataset.rescueNpcState = datasetState;
     document.body.dataset.rescueNpcProgress = `${Math.round(rescueState.progress)}`;
     document.body.dataset.rescueNpcReturnProgress = `${Math.round(rescueState.returnProgress)}`;
+    // The surface level has a real world-space botanist; avoid a second floating NPC.
+    if (surfaceAdventure.enabled) renderHiddenOverlay();
+    else if (surfaceAdventure.vortex.active) {
+      if (!vortexOverlayStart) {
+        const rect = rescueOverlay.getBoundingClientRect();
+        vortexOverlayStart = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+      }
+      const vortex = surfaceAdventure.vortex;
+      const t = 1 - (1 - vortex.progress) ** 3;
+      rescueOverlay.style.transition = 'none';
+      rescueOverlay.style.right = 'auto';
+      rescueOverlay.style.bottom = 'auto';
+      rescueOverlay.style.left = `${vortexOverlayStart.x + (vortex.x - vortexOverlayStart.x) * t}px`;
+      rescueOverlay.style.top = `${vortexOverlayStart.y + (vortex.y - vortexOverlayStart.y) * t}px`;
+      rescueOverlay.style.transform = `translate(-50%, -50%) rotate(${vortex.progress * 720}deg) scale(${1 - vortex.progress * 0.95})`;
+    }
   }
 
   rescueState.lastMode = mode;

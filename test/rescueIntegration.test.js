@@ -1,0 +1,193 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import { register } from 'node:module';
+import { JSDOM } from 'jsdom';
+import { surfaceAdventure } from '../src/surfaceAdventureState.js';
+
+test('full app: surface rescue, rewards, reboarding, planet service, other planets, vortex and reset', async () => {
+  const dom = new JSDOM(await readFile(new URL('../index.html', import.meta.url), 'utf8'), { url: 'http://localhost' });
+  register('./support/rendererLoader.js', import.meta.url);
+  let now = 100;
+  let nextId = 0;
+  const frames = new Map();
+  Object.assign(globalThis, {
+    window: dom.window, document: dom.window.document, MutationObserver: dom.window.MutationObserver,
+    performance: { now: () => now },
+    requestAnimationFrame: (fn) => { frames.set(++nextId, fn); return nextId; },
+    cancelAnimationFrame: (id) => frames.delete(id)
+  });
+  dom.window.HTMLCanvasElement.prototype.getContext = () => ({ fillRect() {}, strokeRect() {}, fillText() {} });
+  const $ = (selector) => document.querySelector(selector);
+  const key = (code, down) => window.dispatchEvent(new window.KeyboardEvent(down ? 'keydown' : 'keyup', { code }));
+  async function advance(seconds) {
+    for (let i = 0; i < Math.ceil(seconds * 20); i++) {
+      now += 50;
+      const current = [...frames.entries()];
+      for (const [id, fn] of current) {
+        if (!frames.delete(id)) continue;
+        fn(now);
+      }
+      await new Promise(setImmediate);
+    }
+  }
+  async function move(code, seconds, jetpack = false) {
+    key(code, true);
+    if (jetpack) key('Space', true);
+    await advance(seconds);
+    key(code, false);
+    if (jetpack) key('Space', false);
+  }
+  try {
+    await import('../src/main.js');
+    const graphics = await import('./support/threeRenderer.js');
+    await advance(0.1);
+    const scene = graphics.renderedScene;
+    const player = scene.children.find((child) => child.getObjectByName('jetpackFlames'));
+    const crew = scene.getObjectByName('launchSpectators');
+    assert.equal(crew.visible, true);
+    $('#launchButton').click();
+    await advance(1);
+    assert.equal(scene.getObjectByName('monkeyPassenger').visible, true);
+    await advance(7);
+    assert.equal($('#planetName').textContent, 'Sprout-9');
+    assert.equal(crew.visible, false);
+    $('#actionButton').click();
+    await advance(0.1);
+    assert.equal(surfaceAdventure.active, true);
+    assert.equal($('#actionButton').disabled, true);
+    await move('KeyD', 5);
+    assert.equal(surfaceAdventure.run.state, 'visible');
+    assert.ok(surfaceAdventure.run.progress < 50, 'wall blocks real progress');
+    const wallX = player.position.x;
+    await move('KeyD', 1.3, true);
+    await move('KeyD', 3.7);
+    await advance(1);
+    assert.ok(player.position.x > wallX + 9);
+    assert.equal(document.body.dataset.rescueNpcState, 'following');
+    assert.ok(graphics.renderedCamera.position.x > wallX + 7, 'camera scrolls with player');
+    await move('KeyA', 5);
+    assert.equal(document.body.dataset.rescueNpcState, 'following');
+    await move('KeyA', 1.3, true);
+    await move('KeyA', 2.8);
+    await advance(1);
+    assert.equal(document.body.dataset.rescueNpcState, 'rescued', JSON.stringify({ player: player.position, run: surfaceAdventure.run }));
+    assert.match(document.body.textContent, /Rescues: 1\s+•\s+Badges: 1/);
+    assert.equal($('#actionButton').disabled, false);
+    $('#actionButton').click();
+    await advance(0.1);
+    assert.equal(document.body.dataset.rescueNpcState, 'boarded');
+    assert.equal(surfaceAdventure.active, false);
+    assert.ok([...document.querySelectorAll('div[aria-hidden="false"]')].some((el) => el.textContent.includes('Passenger aboard') && el.textContent.includes('Lost botanist')));
+    assert.ok([...document.querySelectorAll('aside')].some((el) => el.getAttribute('aria-hidden') === 'false' && el.textContent.includes('Lost botanist secured')));
+    $('#actionButton').click();
+    await advance(0.1);
+    $('#actionButton').click();
+    await advance(0.1);
+    assert.match(document.body.textContent, /Rescues: 1\s+•\s+Badges: 1/);
+    $('#launchButton').click();
+    assert.equal($('#launchButton').textContent, 'Servicing rocket...');
+    await advance(4);
+    assert.equal($('#modeName').textContent, 'In flight');
+    assert.equal(surfaceAdventure.enabled, false);
+    await advance(8);
+    assert.equal($('#planetName').textContent, 'Cinder Bean');
+    $('#actionButton').click();
+    await advance(0.1);
+    assert.equal(surfaceAdventure.run.level.kind, 'steam');
+    key('KeyD', true);
+    for (let i = 0; i < 500 && surfaceAdventure.run.state !== 'following'; i++) await advance(0.05);
+    key('KeyD', false);
+    assert.equal(document.body.dataset.rescueNpcState, 'following');
+    key('Space', true);
+    for (let i = 0; i < 240 && !surfaceAdventure.vortex.active; i++) await advance(0.05);
+    const cinderNpc = scene.getObjectByName('cinderSurfaceAdventure').getObjectByName('surfaceRescueNpc');
+    const cinderNpcBefore = cinderNpc.position.clone();
+    await advance(1);
+    assert.ok(cinderNpc.position.distanceTo(cinderNpcBefore) > 0.1);
+    assert.ok(cinderNpc.scale.x < 0.85);
+    assert.match(document.body.textContent, /Rescues: 1\s+•\s+Badges: 1/);
+    key('Space', false);
+    await advance(3);
+    assert.equal(surfaceAdventure.run.state, 'visible');
+    assert.equal(surfaceAdventure.run.npc.x, 21);
+    assert.equal(surfaceAdventure.run.vent.safe, false);
+    $('#actionButton').click();
+    await advance(0.1);
+    assert.equal(cinderNpc.scale.x, 0.85);
+    key('KeyD', true);
+    for (let i = 0; i < 500 && surfaceAdventure.run.state !== 'following'; i++) await advance(0.05);
+    key('KeyD', false);
+    assert.equal(document.body.dataset.rescueNpcState, 'following');
+    key('KeyA', true);
+    for (let i = 0; i < 500 && surfaceAdventure.run.state !== 'rescued'; i++) await advance(0.05);
+    key('KeyA', false);
+    await advance(0.1);
+    assert.equal(document.body.dataset.rescueNpcState, 'rescued');
+    assert.match(document.body.textContent, /Rescues: 2\s+•\s+Badges: 2/);
+    $('#actionButton').click();
+    await advance(0.1);
+    assert.equal($('#modeName').textContent, 'Landed');
+    $('#launchButton').click();
+    await advance(12);
+    assert.equal($('#planetName').textContent, 'Frost Pea');
+    assert.equal(surfaceAdventure.enabled, false);
+    // Legacy Frost presentation also participates; holding left in the vortex must not award a rescue.
+    $('#actionButton').click();
+    await move('KeyD', 5);
+    assert.equal(document.body.dataset.rescueNpcState, 'following');
+    key('Space', true);
+    for (let i = 0; i < 240 && !surfaceAdventure.vortex.active; i++) await advance(0.05);
+    key('KeyA', true);
+    await advance(1.5);
+    assert.equal(document.body.dataset.rescueNpcState, 'following');
+    assert.match($('#rescueNpcBeacon').style.transform, /rotate/);
+    assert.match(document.body.textContent, /Rescues: 2\s+•\s+Badges: 2/);
+    key('KeyA', false);
+    key('Space', false);
+    await advance(2);
+    assert.equal($('#modeName').textContent, 'Landed');
+    assert.equal(document.body.dataset.rescueNpcReturnProgress, '0');
+    $('#resetButton').click();
+    await advance(0.1);
+    assert.equal(crew.visible, true);
+    $('#launchButton').click();
+    await advance(8);
+    $('#actionButton').click();
+    await move('KeyD', 5);
+    await move('KeyD', 1.3, true);
+    await move('KeyD', 3.7);
+    await advance(1);
+    assert.equal(document.body.dataset.rescueNpcState, 'following');
+    key('Space', true);
+    for (let i = 0; i < 240 && !surfaceAdventure.vortex.active; i++) await advance(0.05);
+    assert.equal(surfaceAdventure.vortex.active, true);
+    const npc = scene.getObjectByName('surfaceRescueNpc');
+    const npcBefore = npc.position.clone();
+    await advance(1);
+    assert.ok(npc.position.distanceTo(npcBefore) > 0.1, 'NPC moves during vortex');
+    assert.ok(npc.scale.x < 0.85, 'NPC shrinks during vortex');
+    assert.equal(document.body.dataset.rescueNpcState, 'following');
+    assert.match(document.body.textContent, /Rescues: 2\s+•\s+Badges: 2/);
+    await advance(3);
+    key('Space', false);
+    assert.equal($('#modeName').textContent, 'Landed');
+    assert.equal(surfaceAdventure.active, false);
+    assert.equal(surfaceAdventure.run.state, 'visible');
+    assert.equal(document.body.dataset.rescueNpcReturnProgress, '0');
+    $('#actionButton').click();
+    await advance(0.1);
+    assert.equal(surfaceAdventure.active, true);
+    assert.equal(surfaceAdventure.run.npc.x, 19);
+    assert.equal(npc.scale.x, 0.85);
+    assert.equal(npc.rotation.z, 0);
+    $('#resetButton').click();
+    await advance(0.1);
+    assert.equal(surfaceAdventure.enabled, false);
+    assert.equal(document.body.dataset.rescueNpcState, 'hidden');
+    assert.equal(scene.getObjectByName('monkeyPassenger').visible, false);
+    assert.equal(scene.getObjectByName('sproutSurfaceAdventure').visible, false);
+  } finally {
+    dom.window.close();
+  }
+});
