@@ -13,8 +13,8 @@ This slice starts the rocket-theft arc without implementing the full repair, UFO
   - tiny mischievous aliens;
   - signs that point the player right after the rocket is stolen.
 - A visible theft sequence after the astronaut exits the rocket:
-  - tiny aliens waddle toward the ship;
-  - the rocket launches away without permission;
+  - tiny aliens waddle toward and visibly board the ship;
+  - the rocket waits on the ground until boarding is readable, then launches away without permission;
   - the astronaut remains stranded on the planet.
 - A clear stranded state:
   - no rocket boarding;
@@ -57,8 +57,8 @@ normal planet selection
 6. Confirm the rocket lands on a purple/yellow Sneakle surface.
 7. Press **E** / **Exit rocket**.
 8. Confirm the astronaut appears beside the landed rocket.
-9. Confirm tiny mischievous aliens waddle toward the rocket.
-10. Confirm the rocket flies away and disappears.
+9. Confirm tiny mischievous aliens waddle toward the rocket while the ship stays grounded.
+10. Confirm the rocket only flies away after the aliens visibly reach/board it, then disappears.
 11. Confirm the astronaut remains on Sneakle-5.
 12. Confirm the buttons show the rocket is unavailable and the help text says to find another way off.
 13. Walk and jetpack right to confirm exploration uses the side-scroller camera and movement style.
