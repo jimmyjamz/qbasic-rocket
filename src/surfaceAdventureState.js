@@ -16,7 +16,7 @@ export const FROST_LEVEL = Object.freeze({
 });
 export const CONTACT_LEVEL = Object.freeze({
   kind: 'aliens', name: 'Gherkin-7', npcLabel: 'WELCOME, FRIEND',
-  minX: -2, maxX: 14, targetX: 11.5, gateX: 8.5, obstacleLeft: 3.2, obstacleRight: 4,
+  minX: -2, maxX: 14, targetX: 11.5, gateX: 8.5, obstacleLeft: 2.7, obstacleRight: 3.5,
   obstacleHeight: 0, radius: 0.24
 });
 

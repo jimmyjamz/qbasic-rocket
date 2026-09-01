@@ -308,6 +308,7 @@ test('full app: surface rescue, rewards, reboarding, planet service, other plane
     await move('KeyD', 4);
     assert.ok(player.position.x > contactPlayerStart + 1, 'a few steps are available');
     assert.ok(player.position.x < contactPlayerStart + 3.5, 'alien crowd blocks the garden path');
+    assert.ok(crowd.children[0].position.x - surfaceAdventure.run.player.x > 0.7, 'astronaut stops visibly in front of the lead alien');
     key('Space', true);
     await advance(0.8);
     assert.ok(crowd.children[0].position.y > 0.5, 'lead alien flies up to visibly block the jetpack route');
