@@ -12,6 +12,9 @@ The crowd uses staggered hops, nervous shuffling, uneven leaning, and small
 forward/back surges to communicate visible confusion and discomfort. After the
 translator clears the misunderstanding, the single garden keeper uses a slower,
 calmer wave so the emotional change reads without dialogue or combat.
+Each alien has thin arms, small palms, and three long fingers. The crowd gestures
+unevenly with both hands, while the garden keeper raises one hand in a friendly
+wave.
 
 After boarding, Return to station uses the established animated flight. The
 station supply stop then exposes one Collect Translator Badge action. This is a

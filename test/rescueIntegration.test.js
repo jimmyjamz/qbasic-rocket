@@ -297,10 +297,13 @@ test('full app: surface rescue, rewards, reboarding, planet service, other plane
     assert.equal(surfaceAdventure.run.level.kind, 'aliens');
     assert.equal(surfaceAdventure.run.contactStage, 'blocked');
     const crowd = scene.getObjectByName('contactSurfaceAdventure').children.find((child) => child.children.length === 7);
+    assert.equal(crowd.children[0].getObjectByName('leftAlienArm').children.length, 5, 'alien has a thin arm, palm, and three fingers');
     const crowdPose = { x: crowd.children[2].position.x, z: crowd.children[2].rotation.z };
+    const crowdArmPose = crowd.children[2].getObjectByName('rightAlienArm').rotation.z;
     await advance(0.25);
     assert.ok(Math.abs(crowd.children[2].position.x - crowdPose.x) > 0.01, 'alien crowd visibly shuffles');
     assert.ok(Math.abs(crowd.children[2].rotation.z - crowdPose.z) > 0.01, 'alien crowd visibly leans in discomfort');
+    assert.ok(Math.abs(crowd.children[2].getObjectByName('rightAlienArm').rotation.z - crowdArmPose) > 0.01, 'alien crowd gestures with its hands');
     const contactPlayerStart = player.position.x;
     await move('KeyD', 4);
     assert.ok(player.position.x > contactPlayerStart + 1, 'a few steps are available');
