@@ -221,6 +221,7 @@ export function createSurfaceAdventureView(createAstronaut, level = SPROUT_LEVEL
       }
       if (contact) {
         const insideGarden = ['garden', 'welcomed'].includes(run.contactStage);
+        const showBlockade = run.contactStage === 'blocked';
         alienCrowd.visible = !insideGarden;
         friendlyAlien.visible = insideGarden;
         gardenGate.visible = run.contactStage !== 'welcomed';
@@ -240,9 +241,10 @@ export function createSurfaceAdventureView(createAstronaut, level = SPROUT_LEVEL
           const rightArm = alien.getObjectByName('rightAlienArm');
           leftArm.rotation.z = -0.38 - Math.sin(time * 6.1 + phase) * 0.28;
           rightArm.rotation.z = 0.38 + Math.cos(time * 5.4 + phase) * 0.28;
-          // The lead greeter mirrors jetpack height at the boundary so the
-          // all-altitude crowd collision is visible rather than an unseen wall.
-          alien.position.y = index === 0 ? Math.max(hop, run.player.y) : hop;
+          // Only the unresolved first-visit blockade mirrors jetpack height.
+          // Once the translator opens the gate, the crowd may fidget but never
+          // becomes a visible all-altitude blocker during the return path.
+          alien.position.y = index === 0 && showBlockade ? Math.max(hop, run.player.y) : hop;
         });
         const friendlyTime = performance.now() * 0.001;
         friendlyAlien.rotation.z = Math.sin(friendlyTime * 3) * 0.055;
