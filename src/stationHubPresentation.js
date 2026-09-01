@@ -46,7 +46,8 @@ const missions = {
   'Sprout-9': 'Find the lost botanist. Cross the vines and escort them back to the rocket.',
   'Cinder Bean': 'Find the heat-shield mechanic. Cross on GO and escort them back.',
   'Frost Pea': 'Find the frozen explorer and bring them safely back to the rocket.',
-  'Gherkin-7': 'Make peaceful first contact. A Translator Badge may be needed.'
+  'Gherkin-7': 'Make peaceful first contact. A Translator Badge may be needed.',
+  'Sneakle-5': 'Scout a new alien planet. The local aliens look mischievous, not dangerous.'
 };
 const translatorButton = hub.querySelector('#translatorButton');
 translatorButton.addEventListener('click', () => {
@@ -90,5 +91,5 @@ for (const node of [mode, launch, document.querySelector('#planetName')]) {
   uiObserver.observe(node, { childList: true, characterData: true, subtree: true, attributes: true, attributeFilter: ['disabled'] });
 }
 const rewardObserver = new MutationObserver(renderHub);
-rewardObserver.observe(document.body, { attributes: true, attributeFilter: ['data-session-rescues', 'data-session-badges', 'data-rescue-npc-state', 'data-first-contact-state', 'data-first-contact-badge', 'data-translator-badge'] });
+rewardObserver.observe(document.body, { attributes: true, attributeFilter: ['data-session-rescues', 'data-session-badges', 'data-rescue-npc-state', 'data-first-contact-state', 'data-first-contact-badge', 'data-translator-badge', 'data-rocket-theft-state'] });
 renderHub();
