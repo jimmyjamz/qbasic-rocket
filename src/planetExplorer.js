@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { surfaceAdventure, SPROUT_LEVEL, CINDER_LEVEL, FROST_LEVEL, CONTACT_LEVEL, THEFT_LEVEL, createSurfaceRun, resolveSurfaceMovement } from './surfaceAdventureState.js';
+import { getDevTestStartRequest, primeSneakleRunForStage } from './devTestStart.js';
 import { createSurfaceAdventureView } from './surfaceAdventureView.js';
 
 const canvas = document.querySelector('#scene');
@@ -1670,11 +1671,91 @@ function updateUi() {
   }
 }
 
+
+function applyDevTestStartFromUrl() {
+  const request = getDevTestStartRequest();
+  if (!request || request.planet !== 'sneakle') return;
+
+  const sneakleIndex = SURFACE_LEVELS.findIndex((level) => level === THEFT_LEVEL);
+  if (sneakleIndex < 0) return;
+
+  document.body.dataset.devTestStart = `Sneakle-5:${request.stage}`;
+
+  if (request.stage === 'select' || request.stage === 'ready') {
+    targetPlanetIndex = sneakleIndex;
+    updateUi();
+    return;
+  }
+
+  startDevTestLanded(sneakleIndex);
+
+  if (request.stage !== 'landed') {
+    startDevTestWalking(request.stage);
+  }
+}
+
+function startDevTestLanded(planetIndex) {
+  returningToStation = false;
+  targetPlanetIndex = planetIndex;
+  lastLandedX = 0;
+  hasSwappedDestinationScene = false;
+  completeLanding();
+  updateHud(112000, 'Dev start', 'Landed');
+  updateUi();
+}
+
+function startDevTestWalking(stage) {
+  const level = surfaceAdventure.run.level;
+
+  resetBlackHoleState();
+  resetLaunchCountdownState();
+  keys.clear();
+
+  flightMode = 'walking';
+  surfaceAdventure.enabled = true;
+  surfaceAdventure.active = true;
+  surfaceView.group.visible = true;
+  planetSurface.visible = false;
+
+  astronaut.visible = true;
+  astronautVelocityX = 0;
+  astronautVelocityY = 0;
+  jetpackActive = false;
+
+  let localX = 1.05;
+  const localY = 0;
+
+  if (level.kind === 'theft') {
+    primeSneakleRunForStage(stage);
+    document.body.dataset.rocketTheftState = surfaceAdventure.run.state;
+    document.body.dataset.rocketTheftPlanet = level.name;
+    rocket.visible = false;
+
+    if (stage === 'ufo') {
+      localX = (level.ufoApproachX ?? level.ufoX) + 0.05;
+    } else if (stage === 'hatch') {
+      localX = (level.ufoBodyLeft ?? level.hatchX ?? level.ufoApproachX) - (level.radius ?? 0.24) - 0.35;
+    }
+  }
+
+  astronaut.position.set(surfaceView.group.position.x + localX, ASTRONAUT_GROUND_Y + localY, 0.18);
+  astronaut.rotation.set(0, 0, 0);
+  astronaut.scale.setScalar(1);
+
+  surfaceAdventure.run.update(0.16, { x: localX, y: localY });
+  surfaceView.update(surfaceAdventure.run);
+  updateTheftRocketDuringSurface(performance.now());
+
+  updateHud(112000, 'Dev start', 'Testing');
+  updateUi();
+}
+
 function resetExperience() {
   returningToStation = false;
   document.body.dataset.stationReturn = 'idle';
   document.body.dataset.rocketTheftState = 'idle';
   document.body.dataset.rocketTheftPlanet = '';
+  document.body.dataset.devTestStart = '';
   leaveSurfaceAdventure();
   keys.clear();
   currentPlanetIndex = 0;
@@ -1730,6 +1811,7 @@ function resetExperience() {
 
   updateHud(0, 'Idle', 'Waiting');
   updateUi();
+  applyDevTestStartFromUrl();
 }
 
 function readableMode(mode) {
