@@ -22,9 +22,10 @@ export const CONTACT_LEVEL = Object.freeze({
 export const THEFT_LEVEL = Object.freeze({
   kind: 'theft', name: 'Sneakle-5', npcLabel: 'BROKEN UFO · NEEDS PARTS!',
   minX: -2, maxX: 27.5, targetX: 25, ufoX: 25, ufoApproachX: 21.7,
-  hatchX: 22.2, partX: 25.6, partY: 1.45, partMinY: 1.05, clueX: 10.5,
-  // RKT-70 keeps the first part within the proven visible hatch area but raises it
-  // so the player must use a small jetpack hop instead of collecting it by walking.
+  hatchX: 22.2, hatchPanelX: 25.6, hatchPanelY: 1.45, hatchPanelMinY: 1.05,
+  missingPartLabel: 'WOBBLE COIL', clueX: 10.5,
+  // RKT-70 uses a raised hatch diagnostic panel, not a repair part sitting on the UFO.
+  // The missing repair part should be found somewhere else in a later slice.
   // Extended underground traversal and hard blockers remain deferred.
   obstacleLeft: 99, obstacleRight: 100, obstacleHeight: 0, radius: 0.24
 });
@@ -76,7 +77,7 @@ export function createSurfaceRun(level = SPROUT_LEVEL) {
   let theftProgress = 0;
   let theftBoardingProgress = 0;
   let ufoDiscovered = false;
-  let ufoPartCollected = false;
+  let ufoHatchInspected = false;
   const run = {
     level,
     get hasPickaxe() { return hasPickaxe; },
@@ -85,8 +86,8 @@ export function createSurfaceRun(level = SPROUT_LEVEL) {
     get objective() {
       if (level.kind === 'theft') {
         if (run.state === 'stealing') return 'ROCKET THEFT!';
-        if (ufoPartCollected) return 'UFO PART FOUND';
-        if (ufoDiscovered) return 'FIND UFO PART';
+        if (ufoHatchInspected) return 'FIND MISSING PART';
+        if (ufoDiscovered) return 'INSPECT UFO HATCH';
         if (run.state === 'stranded') return 'FIND BROKEN UFO';
         return 'SCOUT LANDING ZONE';
       }
@@ -97,7 +98,7 @@ export function createSurfaceRun(level = SPROUT_LEVEL) {
     get theftProgress() { return theftProgress; },
     get theftBoardingProgress() { return theftBoardingProgress; },
     get ufoDiscovered() { return ufoDiscovered; },
-    get ufoPartCollected() { return ufoPartCollected; },
+    get ufoHatchInspected() { return ufoHatchInspected; },
     get theftArea() { return ufoDiscovered ? 'underground' : 'surface'; },
     get canInspectUfo() {
       return level.kind === 'theft' && run.state === 'stranded' &&
@@ -105,13 +106,13 @@ export function createSurfaceRun(level = SPROUT_LEVEL) {
         run.player.x <= level.ufoX + 1.8 &&
         run.player.y < 0.9;
     },
-    get canCollectUfoPart() {
-      if (level.kind !== 'theft' || run.state !== 'stranded' || !ufoDiscovered || ufoPartCollected) return false;
-      const partMinY = level.partMinY ?? 0;
-      const partMaxY = level.partMaxY ?? 2.4;
-      return Math.abs(run.player.x - level.partX) < 0.65 &&
-        run.player.y >= partMinY &&
-        run.player.y <= partMaxY;
+    get canInspectHatchPanel() {
+      if (level.kind !== 'theft' || run.state !== 'stranded' || !ufoDiscovered || ufoHatchInspected) return false;
+      const panelMinY = level.hatchPanelMinY ?? 0;
+      const panelMaxY = level.hatchPanelMaxY ?? 2.4;
+      return Math.abs(run.player.x - level.hatchPanelX) < 0.65 &&
+        run.player.y >= panelMinY &&
+        run.player.y <= panelMaxY;
     },
     get canEnterGarden() { return level.kind === 'aliens' && contactStage === 'gate' && Math.abs(run.player.x - level.gateX) < 1.6 && run.player.y < 0.75; },
     get canWelcome() { return level.kind === 'aliens' && contactStage === 'garden' && Math.abs(run.player.x - level.targetX) < 1.25 && run.player.y < 0.75; },
@@ -127,7 +128,7 @@ export function createSurfaceRun(level = SPROUT_LEVEL) {
         theftProgress = 0;
         theftBoardingProgress = 0;
         ufoDiscovered = false;
-        ufoPartCollected = false;
+        ufoHatchInspected = false;
       }
     },
     tick(dt, player) {
@@ -157,7 +158,7 @@ export function createSurfaceRun(level = SPROUT_LEVEL) {
       theftProgress = 0;
       theftBoardingProgress = 0;
       ufoDiscovered = false;
-      ufoPartCollected = false;
+      ufoHatchInspected = false;
     },
     update(dt, player) {
       clock += dt;
@@ -179,11 +180,11 @@ export function createSurfaceRun(level = SPROUT_LEVEL) {
               ufoDiscovered = true;
               run.progress = 0;
             }
-          } else if (!ufoPartCollected) {
+          } else if (!ufoHatchInspected) {
             const roomStart = level.ufoApproachX ?? level.hatchX ?? level.ufoX;
-            run.progress = Math.max(0, Math.min(99, (player.x - roomStart) / (level.partX - roomStart) * 100));
-            if (run.canCollectUfoPart) {
-              ufoPartCollected = true;
+            run.progress = Math.max(0, Math.min(99, (player.x - roomStart) / (level.hatchPanelX - roomStart) * 100));
+            if (run.canInspectHatchPanel) {
+              ufoHatchInspected = true;
               run.progress = 100;
             }
           } else {

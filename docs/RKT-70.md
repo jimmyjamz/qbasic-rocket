@@ -1,21 +1,27 @@
-# RKT-70 — Sneakle traversal and harder UFO part pickup
+# RKT-70 — Sneakle hatch diagnostic
 
-This slice builds on the merged Sneakle rocket-theft, broken-UFO, and first-part discovery work.
+This slice fixes the clunky first RKT-70 pass. The player should not find a UFO repair part sitting on the broken UFO itself.
 
 ## What it adds
 
-- Keeps the first UFO part in the current camera-safe UFO/hatch area.
-- Raises the blinking part onto a small hatch-room ledge.
-- Requires a small jetpack hop before the part can be collected.
-- Prevents normal ground walking from immediately collecting the part.
-- Updates Sneakle mission copy so the player is asked to reach the ledge, not just walk into the part.
+- Keeps the gameplay challenge in the current camera-safe UFO/hatch area.
+- Changes the raised target from a **UFO part** into a blinking **hatch diagnostic panel**.
+- Requires a small jetpack hop to inspect the panel.
+- Ground walking alone should not complete the diagnostic.
+- After inspection, the objective becomes **FIND MISSING PART**.
+- The missing part is identified as a **Wobble Coil**, which should be found elsewhere in a later slice.
 
-## Why this scope
+## Intended story flow
 
-The earlier extended underground-room attempt exposed camera/scroller assumptions that are not ready for a longer rightward traversal. RKT-70 makes the part feel earned without reopening that fragile path.
+1. Rocket is stolen.
+2. Player finds the broken UFO.
+3. Player jetpacks up to inspect the hatch panel.
+4. The UFO diagnostic reveals that a Wobble Coil is missing.
+5. Player must search Sneakle next.
 
 ## Out of scope
 
+- No actual repair part pickup yet.
 - No full underground traversal yet.
 - No hard blocker/wall yet.
 - No inventory system.
@@ -32,14 +38,14 @@ The earlier extended underground-room attempt exposed camera/scroller assumption
 3. Press **E** to exit.
 4. Confirm the tiny aliens steal the rocket.
 5. Walk right and find the broken UFO.
-6. Confirm objective changes to **FIND UFO PART**.
-7. Walk into the nearby hatch/part area on the ground.
-8. Confirm ground walking alone does **not** collect the part.
-9. Use **Space** / jetpack to hop up to the blinking part.
-10. Confirm objective changes to **UFO PART FOUND**.
+6. Confirm objective changes to **INSPECT UFO HATCH**.
+7. Walk into the hatch/panel area on the ground.
+8. Confirm ground walking alone does **not** complete it.
+9. Use **Space** / jetpack to hop up to the blinking hatch panel.
+10. Confirm objective changes to **FIND MISSING PART**.
 11. Confirm no repair/trade/warp/recovery starts yet.
 12. Spot-check **Gherkin-7** still works.
 
 ## Follow-up direction
 
-A later slice should rebuild the larger underground room directly inside the shared surface-view system before adding longer traversal, puzzles, or more demanding obstacles.
+Next slice should put the Wobble Coil somewhere else on Sneakle, ideally through a small traversal/trade beat that feels earned without requiring a full inventory system yet.

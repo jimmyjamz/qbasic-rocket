@@ -1,4 +1,4 @@
-// Visual helper for Sneakle's hatch-room and first UFO-part beat.
+// Visual helper for Sneakle's hatch-room diagnostic beat.
 // Gameplay state/collision lives in surfaceAdventureState.js.
 import * as THREE from 'three';
 import { surfaceAdventure, THEFT_LEVEL } from './surfaceAdventureState.js';
@@ -57,7 +57,7 @@ function createUndergroundOverlay() {
   const floorMaterial = new THREE.MeshStandardMaterial({ color: 0x24113d, roughness: 0.8 });
   const wallMaterial = new THREE.MeshStandardMaterial({ color: 0x3a2460, roughness: 0.78 });
   const glowMaterial = new THREE.MeshStandardMaterial({ color: 0xffdd66, emissive: 0xffdd66, emissiveIntensity: 0.45 });
-  const partMaterial = new THREE.MeshStandardMaterial({ color: 0x7df5ff, emissive: 0x38c8ff, emissiveIntensity: 0.6, metalness: 0.2, roughness: 0.25 });
+  const panelMaterial = new THREE.MeshStandardMaterial({ color: 0x7df5ff, emissive: 0x38c8ff, emissiveIntensity: 0.6, metalness: 0.2, roughness: 0.25 });
 
   const hatch = new THREE.Group();
   hatch.name = 'sneakleHatch';
@@ -73,7 +73,7 @@ function createUndergroundOverlay() {
   group.add(makeSign('HATCH', THEFT_LEVEL.hatchX, 1.35, 1.55));
 
   const roomStart = THEFT_LEVEL.hatchX + 1.0;
-  const roomLength = THEFT_LEVEL.partX - roomStart + 1.8;
+  const roomLength = THEFT_LEVEL.hatchPanelX - roomStart + 1.8;
   const backWall = new THREE.Mesh(new THREE.BoxGeometry(roomLength, 2.15, 0.16), wallMaterial);
   backWall.position.set(roomStart + roomLength / 2, 1.0, -0.9);
   group.add(backWall);
@@ -104,18 +104,18 @@ function createUndergroundOverlay() {
 
   const ledge = new THREE.Mesh(new THREE.BoxGeometry(1.35, 0.18, 0.72), glowMaterial);
   ledge.name = 'sneaklePartLedge';
-  ledge.position.set(THEFT_LEVEL.partX, Math.max(0.42, (THEFT_LEVEL.partMinY ?? 1.05) - 0.28), 0.3);
+  ledge.position.set(THEFT_LEVEL.hatchPanelX, Math.max(0.42, (THEFT_LEVEL.hatchPanelMinY ?? 1.05) - 0.28), 0.3);
   group.add(ledge);
 
-  const part = new THREE.Mesh(new THREE.OctahedronGeometry(0.34, 1), partMaterial);
-  part.name = 'sneakleUfoPart';
-  part.position.set(THEFT_LEVEL.partX, THEFT_LEVEL.partY ?? 1.45, 0.36);
-  group.add(part);
-  group.add(makeSign('JETPACK PART', THEFT_LEVEL.partX, 2.35, 2.0));
+  const panel = new THREE.Mesh(new THREE.OctahedronGeometry(0.34, 1), panelMaterial);
+  panel.name = 'sneakleHatchDiagnosticPanel';
+  panel.position.set(THEFT_LEVEL.hatchPanelX, THEFT_LEVEL.hatchPanelY ?? 1.45, 0.36);
+  group.add(panel);
+  group.add(makeSign('HATCH PANEL', THEFT_LEVEL.hatchPanelX, 2.35, 2.0));
 
   group.userData.hatch = hatch;
-  group.userData.part = part;
-  group.userData.partHomeY = THEFT_LEVEL.partY ?? 1.45;
+  group.userData.panel = panel;
+  group.userData.panelHomeY = THEFT_LEVEL.hatchPanelY ?? 1.45;
   return group;
 }
 
@@ -161,12 +161,12 @@ function renderUndergroundOverlay(camera, now = performance.now()) {
   hideOldUfoScenery(show);
   extendSneakleCamera(camera, run);
 
-  const part = overlay.userData.part;
-  if (!part) return;
+  const panel = overlay.userData.panel;
+  if (!panel) return;
 
-  part.visible = show && !run?.ufoPartCollected;
-  if (part.visible) {
-    part.rotation.y += 0.08;
-    part.position.y = overlay.userData.partHomeY + Math.sin(now * 0.006) * 0.08;
+  panel.visible = show && !run?.ufoHatchInspected;
+  if (panel.visible) {
+    panel.rotation.y += 0.08;
+    panel.position.y = overlay.userData.panelHomeY + Math.sin(now * 0.006) * 0.08;
   }
 }

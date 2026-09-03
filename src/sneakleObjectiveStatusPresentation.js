@@ -7,23 +7,23 @@ const loopStatusLabel = document.querySelector('#loopStatus');
 const helpLabel = document.querySelector('#helpText');
 
 function getSneakleMission(run) {
-  if (run.ufoPartCollected) {
+  if (run.ufoHatchInspected) {
     return {
-      title: 'First UFO part found',
-      objective: 'Nice work. Repairing the UFO comes in the next mission slice.',
-      badge: 'Part found',
-      action: 'UFO part found',
-      help: 'First UFO part found. Repairing the UFO comes in the next mission slice.'
+      title: 'Missing part identified',
+      objective: 'The hatch panel says the UFO is missing a Wobble Coil. Search Sneakle for it next.',
+      badge: 'Missing part',
+      action: 'Find missing part',
+      help: 'Diagnostic complete. The UFO needs a Wobble Coil from somewhere else on Sneakle.'
     };
   }
 
   if (run.ufoDiscovered) {
     return {
-      title: 'Reach the hatch ledge',
-      objective: 'Use the jetpack to hop up and touch the blinking UFO part.',
-      badge: 'Parts',
-      action: 'Find UFO part',
-      help: 'Broken UFO found. Jetpack up to the blinking part on the hatch-room ledge.'
+      title: 'Inspect the hatch panel',
+      objective: 'Use the jetpack to hop up and inspect the blinking hatch panel.',
+      badge: 'Inspect',
+      action: 'Inspect hatch',
+      help: 'Broken UFO found. Jetpack up to the blinking hatch panel to learn what is missing.'
     };
   }
 
