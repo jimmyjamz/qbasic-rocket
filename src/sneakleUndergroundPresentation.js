@@ -1,5 +1,5 @@
-// Visual-only RKT-69 helper for Sneakle's first underground parts-room beat.
-// The actual gameplay state/collision lives in surfaceAdventureState.js.
+// Visual helper for Sneakle's hatch-room and first UFO-part beat.
+// Gameplay state/collision lives in surfaceAdventureState.js.
 import * as THREE from 'three';
 import { surfaceAdventure, THEFT_LEVEL } from './surfaceAdventureState.js';
 
@@ -102,14 +102,20 @@ function createUndergroundOverlay() {
     group.add(obstacle);
   }
 
+  const ledge = new THREE.Mesh(new THREE.BoxGeometry(1.35, 0.18, 0.72), glowMaterial);
+  ledge.name = 'sneaklePartLedge';
+  ledge.position.set(THEFT_LEVEL.partX, Math.max(0.42, (THEFT_LEVEL.partMinY ?? 1.05) - 0.28), 0.3);
+  group.add(ledge);
+
   const part = new THREE.Mesh(new THREE.OctahedronGeometry(0.34, 1), partMaterial);
   part.name = 'sneakleUfoPart';
-  part.position.set(THEFT_LEVEL.partX, 0.72, 0.36);
+  part.position.set(THEFT_LEVEL.partX, THEFT_LEVEL.partY ?? 1.45, 0.36);
   group.add(part);
-  group.add(makeSign('BLINKY PART', THEFT_LEVEL.partX, 1.75, 2.0));
+  group.add(makeSign('JETPACK PART', THEFT_LEVEL.partX, 2.35, 2.0));
 
   group.userData.hatch = hatch;
   group.userData.part = part;
+  group.userData.partHomeY = THEFT_LEVEL.partY ?? 1.45;
   return group;
 }
 
@@ -138,9 +144,8 @@ function extendSneakleCamera(camera, run) {
   const desiredX = theftSurfaceGroup.position.x + THREE.MathUtils.clamp(playerX, 2, maxFollowX);
   const desiredY = 1.95;
 
-  // This runs immediately before WebGLRenderer.render(), after planetExplorer's
-  // generic surface camera has already applied its shorter historical clamp.
-  // Assign directly so extended Sneakle room movement is visible in the same frame.
+  // This remains conservative because RKT-70 keeps the first part inside the
+  // proven camera-safe hatch area instead of extending traversal offscreen.
   camera.position.x = desiredX;
   camera.position.y = THREE.MathUtils.lerp(camera.position.y, desiredY, 0.2);
   camera.position.z = THREE.MathUtils.lerp(camera.position.z, 10, 0.2);
@@ -162,6 +167,6 @@ function renderUndergroundOverlay(camera, now = performance.now()) {
   part.visible = show && !run?.ufoPartCollected;
   if (part.visible) {
     part.rotation.y += 0.08;
-    part.position.y = 0.72 + Math.sin(now * 0.006) * 0.08;
+    part.position.y = overlay.userData.partHomeY + Math.sin(now * 0.006) * 0.08;
   }
 }
