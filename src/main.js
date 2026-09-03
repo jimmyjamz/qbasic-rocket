@@ -1,4 +1,5 @@
 import './rocketMonkeyWorldGag.js';
+import './sneakleUndergroundPresentation.js';
 import './planetExplorer.js';
 import './countdownPresentation.js';
 import './launchCrewPresentation.js';
@@ -11,5 +12,6 @@ import './sessionRewardsPresentation.js';
 import './missionSummaryPresentation.js';
 import './rescueDebugPresentation.js';
 import './missionTrackerPresentation.js';
+import './sneakleObjectiveStatusPresentation.js';
 import './stationHubPresentation.js';
 import './firstContactPresentation.js';

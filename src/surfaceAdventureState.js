@@ -20,9 +20,12 @@ export const CONTACT_LEVEL = Object.freeze({
   obstacleHeight: 0, radius: 0.24
 });
 export const THEFT_LEVEL = Object.freeze({
-  kind: 'theft', name: 'Sneakle-5', npcLabel: 'BROKEN UFO AHEAD →',
-  minX: -2, maxX: 30, targetX: 25, ufoX: 25, ufoApproachX: 21.7, clueX: 10.5, obstacleLeft: 99, obstacleRight: 100,
-  obstacleHeight: 0, radius: 0.24
+  kind: 'theft', name: 'Sneakle-5', npcLabel: 'BROKEN UFO · NEEDS PARTS!',
+  minX: -2, maxX: 27.5, targetX: 25, ufoX: 25, ufoApproachX: 21.7,
+  hatchX: 22.2, partX: 25.6, clueX: 10.5,
+  // RKT-69 keeps the first hatch-room beat within the proven visible UFO area.
+  // Extended underground traversal and hard jetpack obstacles are deferred.
+  obstacleLeft: 99, obstacleRight: 100, obstacleHeight: 0, radius: 0.24
 });
 
 export const THEFT_SEQUENCE_SECONDS = 4.2;
@@ -72,6 +75,7 @@ export function createSurfaceRun(level = SPROUT_LEVEL) {
   let theftProgress = 0;
   let theftBoardingProgress = 0;
   let ufoDiscovered = false;
+  let ufoPartCollected = false;
   const run = {
     level,
     get hasPickaxe() { return hasPickaxe; },
@@ -80,7 +84,8 @@ export function createSurfaceRun(level = SPROUT_LEVEL) {
     get objective() {
       if (level.kind === 'theft') {
         if (run.state === 'stealing') return 'ROCKET THEFT!';
-        if (ufoDiscovered) return 'FIND UFO PARTS';
+        if (ufoPartCollected) return 'UFO PART FOUND';
+        if (ufoDiscovered) return 'FIND UFO PART';
         if (run.state === 'stranded') return 'FIND BROKEN UFO';
         return 'SCOUT LANDING ZONE';
       }
@@ -91,11 +96,18 @@ export function createSurfaceRun(level = SPROUT_LEVEL) {
     get theftProgress() { return theftProgress; },
     get theftBoardingProgress() { return theftBoardingProgress; },
     get ufoDiscovered() { return ufoDiscovered; },
+    get ufoPartCollected() { return ufoPartCollected; },
+    get theftArea() { return ufoDiscovered ? 'underground' : 'surface'; },
     get canInspectUfo() {
       return level.kind === 'theft' && run.state === 'stranded' &&
         run.player.x >= (level.ufoApproachX ?? level.ufoX - 1.4) &&
         run.player.x <= level.ufoX + 1.8 &&
         run.player.y < 0.9;
+    },
+    get canCollectUfoPart() {
+      return level.kind === 'theft' && run.state === 'stranded' && ufoDiscovered && !ufoPartCollected &&
+        run.player.x >= level.partX - 0.55 &&
+        run.player.y < 1.4;
     },
     get canEnterGarden() { return level.kind === 'aliens' && contactStage === 'gate' && Math.abs(run.player.x - level.gateX) < 1.6 && run.player.y < 0.75; },
     get canWelcome() { return level.kind === 'aliens' && contactStage === 'garden' && Math.abs(run.player.x - level.targetX) < 1.25 && run.player.y < 0.75; },
@@ -111,6 +123,7 @@ export function createSurfaceRun(level = SPROUT_LEVEL) {
         theftProgress = 0;
         theftBoardingProgress = 0;
         ufoDiscovered = false;
+        ufoPartCollected = false;
       }
     },
     tick(dt, player) {
@@ -140,6 +153,7 @@ export function createSurfaceRun(level = SPROUT_LEVEL) {
       theftProgress = 0;
       theftBoardingProgress = 0;
       ufoDiscovered = false;
+      ufoPartCollected = false;
     },
     update(dt, player) {
       clock += dt;
@@ -155,9 +169,20 @@ export function createSurfaceRun(level = SPROUT_LEVEL) {
           run.progress = Math.round(overallProgress * 100);
           if (overallProgress >= 1) run.state = 'stranded';
         } else if (run.state === 'stranded') {
-          run.progress = Math.max(0, Math.min(ufoDiscovered ? 100 : 99, player.x / (level.ufoApproachX ?? level.ufoX) * 100));
-          if (!ufoDiscovered && run.canInspectUfo) {
-            ufoDiscovered = true;
+          if (!ufoDiscovered) {
+            run.progress = Math.max(0, Math.min(99, player.x / (level.ufoApproachX ?? level.ufoX) * 100));
+            if (run.canInspectUfo) {
+              ufoDiscovered = true;
+              run.progress = 0;
+            }
+          } else if (!ufoPartCollected) {
+            const roomStart = level.ufoApproachX ?? level.hatchX ?? level.ufoX;
+            run.progress = Math.max(0, Math.min(99, (player.x - roomStart) / (level.partX - roomStart) * 100));
+            if (run.canCollectUfoPart) {
+              ufoPartCollected = true;
+              run.progress = 100;
+            }
+          } else {
             run.progress = 100;
           }
         }

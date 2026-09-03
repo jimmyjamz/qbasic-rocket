@@ -66,7 +66,7 @@ export function createSurfaceAdventureView(createAstronaut, level = SPROUT_LEVEL
     sign('TINY FOOTPRINTS?', 4.8, 2.0, 2.6);
   }
   const beacon = theft
-    ? sign('BROKEN UFO · NEEDS PARTS!', level.ufoX + 1.1, 2.35, 3.8)
+    ? sign('BROKEN UFO · NEEDS PARTS!', level.ufoApproachX + 1.6, 2.25, 3.3)
     : sign(level.npcLabel, level.targetX, 1.7, 2);
   const ventSigns = cinder ? [
     sign('WAIT · STEAM', 10, 2.1, 2.4),
@@ -396,7 +396,7 @@ export function createSurfaceAdventureView(createAstronaut, level = SPROUT_LEVEL
       npc.rotation.set(0, 0, 0);
       npc.visible = !contact && !theft && run.state !== 'boarded';
       npc.position.set(run.npc.x, run.npc.y, 0.18);
-      beacon.visible = theft ? run.state === 'stranded' : run.state === 'visible';
+      beacon.visible = theft ? run.state === 'stranded' && !run.ufoDiscovered : run.state === 'visible';
       npc.rotation.y = run.state === 'following' ? -0.22 : 0.22;
     }
   };
