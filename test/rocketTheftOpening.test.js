@@ -12,9 +12,9 @@ import {
 test('Sneakle is a normal surface level, not a sidecar planet', () => {
   assert.equal(THEFT_LEVEL.name, 'Sneakle-5');
   assert.equal(THEFT_LEVEL.kind, 'theft');
-  assert.equal(THEFT_LEVEL.maxX, 30);
+  assert.equal(THEFT_LEVEL.maxX, 27.5);
   assert.equal(THEFT_LEVEL.ufoX, 25);
-  assert.ok(THEFT_LEVEL.ufoApproachX < THEFT_LEVEL.ufoX);
+  assert.equal(THEFT_LEVEL.ufoApproachX, 21.7);
   assert.ok(THEFT_BOARDING_PROGRESS < THEFT_LAUNCH_PROGRESS);
 });
 
@@ -62,7 +62,41 @@ test('stranded Sneakle traversal discovers the broken UFO from the left-side app
 
   run.update(0.16, { x: THEFT_LEVEL.ufoApproachX + 0.05, y: 0 });
   assert.equal(run.ufoDiscovered, true);
-  assert.equal(run.objective, 'FIND UFO PARTS');
+  assert.equal(run.objective, 'FIND UFO PART');
+  assert.equal(run.state, 'stranded');
+});
+
+test('first UFO part stays near the visible hatch area until extended traversal is rebuilt', () => {
+  assert.ok(THEFT_LEVEL.hatchX < THEFT_LEVEL.ufoX);
+  assert.equal(THEFT_LEVEL.obstacleHeight, 0);
+  assert.ok(THEFT_LEVEL.obstacleLeft > THEFT_LEVEL.maxX);
+  assert.ok(THEFT_LEVEL.partX > THEFT_LEVEL.ufoApproachX);
+  assert.ok(THEFT_LEVEL.partX < THEFT_LEVEL.ufoX + 2.5);
+  assert.ok(THEFT_LEVEL.partX <= 27.2);
+  assert.ok(THEFT_LEVEL.maxX < 30);
+});
+
+test('nearby hatch-area UFO part can be collected without extended rightward traversal', () => {
+  const run = createSurfaceRun(THEFT_LEVEL);
+  run.startTheft();
+  run.update(THEFT_SEQUENCE_SECONDS, { x: 1, y: 0 });
+  run.update(0.16, { x: THEFT_LEVEL.ufoApproachX + 0.05, y: 0 });
+  assert.equal(run.ufoDiscovered, true);
+  assert.equal(run.ufoPartCollected, false);
+  assert.equal(run.objective, 'FIND UFO PART');
+
+  const clearEntrance = resolveSurfaceMovement(
+    { x: THEFT_LEVEL.ufoX - 0.25, y: 0 },
+    { x: THEFT_LEVEL.partX - 0.45, y: 0 },
+    THEFT_LEVEL,
+    false
+  );
+  assert.equal(clearEntrance.blockedX, false);
+  assert.ok(clearEntrance.x > THEFT_LEVEL.ufoX - 0.25);
+
+  run.update(0.16, { x: THEFT_LEVEL.partX + 0.05, y: 0 });
+  assert.equal(run.ufoPartCollected, true);
+  assert.equal(run.objective, 'UFO PART FOUND');
   assert.equal(run.state, 'stranded');
 });
 
