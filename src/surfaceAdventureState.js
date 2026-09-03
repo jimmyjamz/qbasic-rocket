@@ -24,8 +24,10 @@ export const THEFT_LEVEL = Object.freeze({
   minX: -2, maxX: 27.5, targetX: 25, ufoX: 25, ufoApproachX: 21.7,
   hatchX: 22.2, hatchPanelX: 25.6, hatchPanelY: 1.45, hatchPanelMinY: 0.85,
   hatchPanelMaxY: 5.0, hatchPanelRadiusX: 1.05, missingPartLabel: 'WOBBLE COIL', clueX: 10.5,
+  ufoBodyLeft: 23.45, ufoBodyRight: 26.35, ufoBodyHeight: 1.12,
   // RKT-70 uses a raised hatch diagnostic panel, not a repair part sitting on the UFO.
-  // The inspection zone is forgiving so a kid-friendly hover near the blinking panel works.
+  // The crashed UFO blocks ground walking so the player cannot pass through the saucer.
+  // The inspection zone remains forgiving so a kid-friendly hover near the panel works.
   // Extended underground traversal and hard blockers remain deferred.
   obstacleLeft: 99, obstacleRight: 100, obstacleHeight: 0, radius: 0.24
 });
@@ -39,6 +41,17 @@ export function steamPhase(clock) {
   if (phase < 4) return { safe: false, label: 'WAIT · STEAM', remaining: 4 - phase };
   if (phase < 10) return { safe: true, label: 'GO · COOL', remaining: 10 - phase };
   return { safe: false, label: 'WAIT · WARMING', remaining: 11 - phase };
+}
+
+function applyLowObstacleCollision(previous, proposedX, proposedY, left, right, height) {
+  let x = proposedX;
+  let y = proposedY;
+  const overlaps = x > left && x < right;
+  if (overlaps && y < height) {
+    if (previous.y >= height) y = height;
+    else x = previous.x <= left ? left : right;
+  }
+  return { x, y };
 }
 
 export function resolveSurfaceMovement(previous, proposed, level = SPROUT_LEVEL, ventSafe = false) {
@@ -58,10 +71,19 @@ export function resolveSurfaceMovement(previous, proposed, level = SPROUT_LEVEL,
     else if (previous.x >= right) x = right;
     // An already admitted character may always leave; no damage or trapping.
   }
-  if (overlaps && y < level.obstacleHeight && level.kind !== 'steam' && !(level.kind === 'ice' && ventSafe)) {
-    if (previous.y >= level.obstacleHeight) y = level.obstacleHeight;
-    else x = previous.x <= left ? left : right;
+  const obstacleResult = applyLowObstacleCollision(previous, x, y, left, right, level.obstacleHeight);
+  x = obstacleResult.x;
+  y = obstacleResult.y;
+
+  if (level.kind === 'theft' && Number.isFinite(level.ufoBodyLeft) && Number.isFinite(level.ufoBodyRight)) {
+    const bodyLeft = level.ufoBodyLeft - level.radius;
+    const bodyRight = level.ufoBodyRight + level.radius;
+    const bodyHeight = level.ufoBodyHeight ?? 1.1;
+    const bodyResult = applyLowObstacleCollision(previous, x, y, bodyLeft, bodyRight, bodyHeight);
+    x = bodyResult.x;
+    y = bodyResult.y;
   }
+
   return { x, y, blockedX: x !== proposed.x, blockedY: y !== proposed.y };
 }
 
