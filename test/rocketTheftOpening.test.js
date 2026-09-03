@@ -78,6 +78,9 @@ test('hatch diagnostic panel stays near the visible hatch area but is raised for
   assert.ok(THEFT_LEVEL.hatchPanelY > THEFT_LEVEL.hatchPanelMinY);
   assert.ok(THEFT_LEVEL.hatchPanelMaxY > THEFT_LEVEL.hatchPanelY);
   assert.ok(THEFT_LEVEL.hatchPanelRadiusX > 0.65);
+  assert.ok(THEFT_LEVEL.ufoBodyLeft < THEFT_LEVEL.ufoX);
+  assert.ok(THEFT_LEVEL.ufoBodyRight > THEFT_LEVEL.ufoX);
+  assert.ok(THEFT_LEVEL.ufoBodyHeight > 0.9);
 });
 
 test('nearby hatch-area diagnostic panel requires a small jetpack hop to inspect', () => {
@@ -89,20 +92,28 @@ test('nearby hatch-area diagnostic panel requires a small jetpack hop to inspect
   assert.equal(run.ufoHatchInspected, false);
   assert.equal(run.objective, 'INSPECT UFO HATCH');
 
-  const clearEntrance = resolveSurfaceMovement(
-    { x: THEFT_LEVEL.ufoX - 0.25, y: 0 },
+  const groundIntoUfo = resolveSurfaceMovement(
+    { x: THEFT_LEVEL.ufoBodyLeft - THEFT_LEVEL.radius - 0.1, y: 0 },
     { x: THEFT_LEVEL.hatchPanelX - 0.05, y: 0 },
     THEFT_LEVEL,
     false
   );
-  assert.equal(clearEntrance.blockedX, false);
-  assert.ok(clearEntrance.x > THEFT_LEVEL.ufoX - 0.25);
+  assert.equal(groundIntoUfo.blockedX, true);
+  assert.ok(groundIntoUfo.x <= THEFT_LEVEL.ufoBodyLeft);
 
   run.update(0.16, { x: THEFT_LEVEL.hatchPanelX, y: 0 });
   assert.equal(run.ufoHatchInspected, false);
   assert.equal(run.objective, 'INSPECT UFO HATCH');
 
-  run.update(0.16, { x: THEFT_LEVEL.hatchPanelX + THEFT_LEVEL.hatchPanelRadiusX - 0.08, y: THEFT_LEVEL.hatchPanelMaxY - 0.2 });
+  const jetpackOverUfo = resolveSurfaceMovement(
+    { x: THEFT_LEVEL.ufoBodyLeft - THEFT_LEVEL.radius - 0.1, y: THEFT_LEVEL.ufoBodyHeight + 0.1 },
+    { x: THEFT_LEVEL.hatchPanelX - 0.05, y: THEFT_LEVEL.ufoBodyHeight + 0.1 },
+    THEFT_LEVEL,
+    false
+  );
+  assert.equal(jetpackOverUfo.blockedX, false);
+
+  run.update(0.16, { x: THEFT_LEVEL.hatchPanelX + THEFT_LEVEL.hatchPanelRadiusX - 0.08, y: THEFT_LEVEL.ufoBodyHeight + 0.1 });
   assert.equal(run.ufoHatchInspected, true);
   assert.equal(run.objective, 'FIND MISSING PART');
   assert.equal(run.state, 'stranded');
