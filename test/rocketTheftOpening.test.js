@@ -62,41 +62,60 @@ test('stranded Sneakle traversal discovers the broken UFO from the left-side app
 
   run.update(0.16, { x: THEFT_LEVEL.ufoApproachX + 0.05, y: 0 });
   assert.equal(run.ufoDiscovered, true);
-  assert.equal(run.objective, 'FIND UFO PART');
+  assert.equal(run.objective, 'INSPECT UFO HATCH');
   assert.equal(run.state, 'stranded');
 });
 
-test('first UFO part stays near the visible hatch area until extended traversal is rebuilt', () => {
+test('hatch diagnostic panel stays near the visible hatch area but is raised for a jetpack hop', () => {
   assert.ok(THEFT_LEVEL.hatchX < THEFT_LEVEL.ufoX);
   assert.equal(THEFT_LEVEL.obstacleHeight, 0);
   assert.ok(THEFT_LEVEL.obstacleLeft > THEFT_LEVEL.maxX);
-  assert.ok(THEFT_LEVEL.partX > THEFT_LEVEL.ufoApproachX);
-  assert.ok(THEFT_LEVEL.partX < THEFT_LEVEL.ufoX + 2.5);
-  assert.ok(THEFT_LEVEL.partX <= 27.2);
+  assert.ok(THEFT_LEVEL.hatchPanelX > THEFT_LEVEL.ufoApproachX);
+  assert.ok(THEFT_LEVEL.hatchPanelX < THEFT_LEVEL.ufoX + 2.5);
+  assert.ok(THEFT_LEVEL.hatchPanelX <= 27.2);
   assert.ok(THEFT_LEVEL.maxX < 30);
+  assert.ok(THEFT_LEVEL.hatchPanelMinY > 0.75);
+  assert.ok(THEFT_LEVEL.hatchPanelY > THEFT_LEVEL.hatchPanelMinY);
+  assert.ok(THEFT_LEVEL.hatchPanelMaxY > THEFT_LEVEL.hatchPanelY);
+  assert.ok(THEFT_LEVEL.hatchPanelRadiusX > 0.65);
+  assert.ok(THEFT_LEVEL.ufoBodyLeft < THEFT_LEVEL.ufoX);
+  assert.ok(THEFT_LEVEL.ufoBodyRight > THEFT_LEVEL.ufoX);
+  assert.ok(THEFT_LEVEL.ufoBodyHeight > 0.9);
 });
 
-test('nearby hatch-area UFO part can be collected without extended rightward traversal', () => {
+test('nearby hatch-area diagnostic panel requires a small jetpack hop to inspect', () => {
   const run = createSurfaceRun(THEFT_LEVEL);
   run.startTheft();
   run.update(THEFT_SEQUENCE_SECONDS, { x: 1, y: 0 });
   run.update(0.16, { x: THEFT_LEVEL.ufoApproachX + 0.05, y: 0 });
   assert.equal(run.ufoDiscovered, true);
-  assert.equal(run.ufoPartCollected, false);
-  assert.equal(run.objective, 'FIND UFO PART');
+  assert.equal(run.ufoHatchInspected, false);
+  assert.equal(run.objective, 'INSPECT UFO HATCH');
 
-  const clearEntrance = resolveSurfaceMovement(
-    { x: THEFT_LEVEL.ufoX - 0.25, y: 0 },
-    { x: THEFT_LEVEL.partX - 0.45, y: 0 },
+  const groundIntoUfo = resolveSurfaceMovement(
+    { x: THEFT_LEVEL.ufoBodyLeft - THEFT_LEVEL.radius - 0.1, y: 0 },
+    { x: THEFT_LEVEL.hatchPanelX - 0.05, y: 0 },
     THEFT_LEVEL,
     false
   );
-  assert.equal(clearEntrance.blockedX, false);
-  assert.ok(clearEntrance.x > THEFT_LEVEL.ufoX - 0.25);
+  assert.equal(groundIntoUfo.blockedX, true);
+  assert.ok(groundIntoUfo.x <= THEFT_LEVEL.ufoBodyLeft);
 
-  run.update(0.16, { x: THEFT_LEVEL.partX + 0.05, y: 0 });
-  assert.equal(run.ufoPartCollected, true);
-  assert.equal(run.objective, 'UFO PART FOUND');
+  run.update(0.16, { x: THEFT_LEVEL.hatchPanelX, y: 0 });
+  assert.equal(run.ufoHatchInspected, false);
+  assert.equal(run.objective, 'INSPECT UFO HATCH');
+
+  const jetpackOverUfo = resolveSurfaceMovement(
+    { x: THEFT_LEVEL.ufoBodyLeft - THEFT_LEVEL.radius - 0.1, y: THEFT_LEVEL.ufoBodyHeight + 0.1 },
+    { x: THEFT_LEVEL.hatchPanelX - 0.05, y: THEFT_LEVEL.ufoBodyHeight + 0.1 },
+    THEFT_LEVEL,
+    false
+  );
+  assert.equal(jetpackOverUfo.blockedX, false);
+
+  run.update(0.16, { x: THEFT_LEVEL.hatchPanelX + THEFT_LEVEL.hatchPanelRadiusX - 0.08, y: THEFT_LEVEL.ufoBodyHeight + 0.1 });
+  assert.equal(run.ufoHatchInspected, true);
+  assert.equal(run.objective, 'FIND MISSING PART');
   assert.equal(run.state, 'stranded');
 });
 
