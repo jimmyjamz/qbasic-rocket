@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { surfaceAdventure, SPROUT_LEVEL, CINDER_LEVEL, FROST_LEVEL, CONTACT_LEVEL, createSurfaceRun, resolveSurfaceMovement } from './surfaceAdventureState.js';
+import { surfaceAdventure, SPROUT_LEVEL, CINDER_LEVEL, FROST_LEVEL, CONTACT_LEVEL, THEFT_LEVEL, createSurfaceRun, resolveSurfaceMovement } from './surfaceAdventureState.js';
 import { createSurfaceAdventureView } from './surfaceAdventureView.js';
 
 const canvas = document.querySelector('#scene');
@@ -78,8 +78,19 @@ const PLANETS = [
     sky: 0x120729,
     fog: 0.029,
     props: 'crystals'
+  },
+  {
+    name: 'Sneakle-5',
+    tagline: 'purple dust, wobbly towers, and very suspicious parking spots',
+    surface: 0x5b3f8f,
+    accent: 0xffdd66,
+    sky: 0x14091f,
+    fog: 0.031,
+    props: 'mischief'
   }
 ];
+
+const SURFACE_LEVELS = [SPROUT_LEVEL, CINDER_LEVEL, FROST_LEVEL, CONTACT_LEVEL, THEFT_LEVEL];
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(PLANETS[0].sky);
@@ -125,7 +136,7 @@ scene.add(launchSpectators);
 
 const planetSurface = new THREE.Group();
 scene.add(planetSurface);
-const surfaceViews = [SPROUT_LEVEL, CINDER_LEVEL, FROST_LEVEL, CONTACT_LEVEL].map(level => createSurfaceAdventureView(createAstronaut, level));
+const surfaceViews = SURFACE_LEVELS.map(level => createSurfaceAdventureView(createAstronaut, level));
 let surfaceView = surfaceViews[0];
 surfaceViews.forEach(view => scene.add(view.group));
 
@@ -386,6 +397,11 @@ function exitRocket() {
     surfaceAdventure.active = true;
     surfaceView.group.visible = true;
     planetSurface.visible = false;
+    if (surfaceAdventure.run.level.kind === 'theft') {
+      surfaceAdventure.run.startTheft();
+      document.body.dataset.rocketTheftState = 'stealing';
+      document.body.dataset.rocketTheftPlanet = surfaceAdventure.run.level.name;
+    }
     surfaceView.update(surfaceAdventure.run);
   }
   updateHud(112000, 'Suit ready', 'Exploring');
@@ -393,6 +409,7 @@ function exitRocket() {
 }
 
 function enterRocket() {
+  if (surfaceAdventure.run.level.kind === 'theft') return;
   surfaceAdventure.run.board();
   surfaceAdventure.active = false;
   surfaceView.group.visible = false;
@@ -416,6 +433,7 @@ function completeLanding() {
     return;
   }
   const planet = PLANETS[targetPlanetIndex];
+  const level = SURFACE_LEVELS[targetPlanetIndex];
   currentPlanetIndex = targetPlanetIndex;
   targetPlanetIndex = getNextPlanetIndex(currentPlanetIndex);
 
@@ -425,19 +443,24 @@ function completeLanding() {
   launchStart = null;
   rocket.position.set(lastLandedX, LAND_Y, 0);
   rocket.rotation.set(0, 0, 0);
+  rocket.visible = true;
   flameLight.intensity = 0;
   launchPad.visible = false;
   launchSpectators.visible = false;
   hasLeftLaunchpad = true;
-  surfaceAdventure.enabled = currentPlanetIndex < 4;
+  surfaceAdventure.enabled = Boolean(level);
   surfaceView = surfaceViews[currentPlanetIndex] ?? surfaceViews[0];
-  surfaceAdventure.run = createSurfaceRun([SPROUT_LEVEL, CINDER_LEVEL, FROST_LEVEL, CONTACT_LEVEL][currentPlanetIndex]);
-  if (currentPlanetIndex === 3) {
+  surfaceAdventure.run = createSurfaceRun(level ?? SPROUT_LEVEL);
+  if (level?.kind === 'aliens') {
     surfaceAdventure.run.prepareContact(
       document.body.dataset.translatorBadge === 'acquired',
       document.body.dataset.firstContactState === 'complete'
     );
     document.body.dataset.contactGarden = surfaceAdventure.run.contactStage;
+  }
+  if (level?.kind !== 'theft') {
+    document.body.dataset.rocketTheftState = 'idle';
+    document.body.dataset.rocketTheftPlanet = '';
   }
   surfaceView.group.position.set(lastLandedX, ASTRONAUT_GROUND_Y, 0);
 
@@ -582,6 +605,7 @@ function updateAstronaut(dt, now) {
     const previousObjective = surfaceAdventure.run.objective;
     surfaceAdventure.run.update(dt, result);
     surfaceView.update(surfaceAdventure.run);
+    updateTheftRocketDuringSurface(now);
     if (surfaceAdventure.run.objective !== previousObjective) updateUi();
   } else {
     astronaut.position.x = THREE.MathUtils.clamp(astronaut.position.x + astronautVelocityX * dt, -WALK_LIMIT, WALK_LIMIT);
@@ -611,10 +635,42 @@ function updateAstronaut(dt, now) {
   const nearRocket = isAstronautNearRocket();
   const boardable = canBoardRocket();
   const gardenAction = surfaceAdventure.run.canEnterGarden || surfaceAdventure.run.canWelcome;
-  actionButton.disabled = !boardable && !gardenAction;
-  actionButton.textContent = surfaceAdventure.run.canEnterGarden ? 'Use Translator at gate (E)' : surfaceAdventure.run.canWelcome ? 'Welcome alien (E)' : boardable ? 'Enter rocket (E)' : nearRocket && surfaceAdventure.active && surfaceAdventure.run.level.kind !== 'aliens' && !['rescued', 'boarded'].includes(surfaceAdventure.run.state) ? 'Bring crew to rocket' : nearRocket ? 'Land to enter rocket' : 'Return to rocket';
-  loopStatusLabel.textContent = jetpackActive ? 'Jetpack firing' : boardable ? 'Ready to board' : 'Exploring';
-  throttleLabel.textContent = jetpackActive ? 'Jetpack' : isGrounded ? 'Suit ready' : 'Coasting';
+  const theftState = surfaceAdventure.active && level.kind === 'theft' ? surfaceAdventure.run.state : null;
+  actionButton.disabled = theftState ? true : !boardable && !gardenAction;
+  actionButton.textContent = theftState === 'stealing' ? 'Rocket occupied' : theftState === 'stranded' ? 'Find another way off' : surfaceAdventure.run.canEnterGarden ? 'Use Translator at gate (E)' : surfaceAdventure.run.canWelcome ? 'Welcome alien (E)' : boardable ? 'Enter rocket (E)' : nearRocket && surfaceAdventure.active && surfaceAdventure.run.level.kind !== 'aliens' && !['rescued', 'boarded'].includes(surfaceAdventure.run.state) ? 'Bring crew to rocket' : nearRocket ? 'Land to enter rocket' : 'Return to rocket';
+  if (theftState === 'stealing') {
+    loopStatusLabel.textContent = 'Rocket theft!';
+    throttleLabel.textContent = 'Unauthorized';
+  } else if (theftState === 'stranded') {
+    loopStatusLabel.textContent = 'Find another way off';
+    throttleLabel.textContent = jetpackActive ? 'Jetpack' : 'Stranded';
+  } else {
+    loopStatusLabel.textContent = jetpackActive ? 'Jetpack firing' : boardable ? 'Ready to board' : 'Exploring';
+    throttleLabel.textContent = jetpackActive ? 'Jetpack' : isGrounded ? 'Suit ready' : 'Coasting';
+  }
+}
+
+function updateTheftRocketDuringSurface(now) {
+  if (!surfaceAdventure.active || surfaceAdventure.run.level.kind !== 'theft') return;
+
+  document.body.dataset.rocketTheftState = surfaceAdventure.run.state;
+  document.body.dataset.rocketTheftPlanet = surfaceAdventure.run.level.name;
+
+  if (surfaceAdventure.run.state === 'stealing') {
+    const progress = surfaceAdventure.run.theftProgress;
+    const eased = easeInOutCubic(progress);
+    rocket.visible = true;
+    rocket.position.x = surfaceView.group.position.x + eased * 4.4;
+    rocket.position.y = LAND_Y + easeOutCubic(progress) * 8.2;
+    rocket.position.z = -eased * 0.9;
+    rocket.rotation.z = -0.15 - eased * 0.45 + Math.sin(now * 0.015) * 0.024;
+    rocket.rotation.x = -0.08 - eased * 0.18;
+    return;
+  }
+
+  if (surfaceAdventure.run.state === 'stranded') {
+    rocket.visible = false;
+  }
 }
 
 function updateAstronautArms(direction, isGrounded, isJetpacking, now, dt) {
@@ -755,6 +811,7 @@ function resetToLastCheckpoint() {
   astronautVelocityX = 0;
   astronautVelocityY = 0;
   keys.delete('Space');
+  rocket.visible = true;
   rocket.position.set(lastLandedX, LAND_Y, 0);
   rocket.rotation.set(0, 0, 0);
   astronaut.visible = false;
@@ -780,10 +837,11 @@ function resetBlackHoleState() {
 }
 
 function isAstronautNearRocket() {
-  return Math.abs(astronaut.position.x - rocket.position.x) < 1.35;
+  return rocket.visible && Math.abs(astronaut.position.x - rocket.position.x) < 1.35;
 }
 
 function canBoardRocket() {
+  if (surfaceAdventure.active && surfaceAdventure.run.level.kind === 'theft') return false;
   if (surfaceAdventure.active && surfaceAdventure.run.level.kind !== 'aliens' && !['rescued', 'boarded'].includes(surfaceAdventure.run.state)) return false;
   return isAstronautNearRocket() && astronaut.position.y <= ASTRONAUT_GROUND_Y + 0.18;
 }
@@ -866,6 +924,14 @@ function createPlanetProp(type, size, material) {
     crystalB.scale.set(0.65, 0.8, 0.65);
     crystalB.position.set(size * 0.55, size * 0.75, size * 0.25);
     group.add(crystalB);
+  } else if (type === 'mischief') {
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(size * 0.34, size * 0.48, size * 1.2, 7), material);
+    base.position.y = size * 0.55;
+    group.add(base);
+    const top = new THREE.Mesh(new THREE.ConeGeometry(size * 0.56, size * 1.7, 7), material);
+    top.position.y = size * 1.5;
+    top.rotation.z = size % 2 ? 0.2 : -0.2;
+    group.add(top);
   } else {
     const shard = new THREE.Mesh(new THREE.OctahedronGeometry(size * 0.9), material);
     shard.position.y = size * 0.9;
@@ -1436,7 +1502,6 @@ function updateTrail(dt, throttle) {
 function recycleParticle(index, throttle) {
   const p = index * 3;
   const spread = 0.15 + throttle * 0.16;
-
   trail.positions[p] = rocket.position.x + (Math.random() - 0.5) * spread;
   trail.positions[p + 1] = rocket.position.y - 0.34 + (Math.random() - 0.5) * 0.12;
   trail.positions[p + 2] = rocket.position.z + (Math.random() - 0.5) * spread;
@@ -1596,7 +1661,11 @@ function updateUi() {
               : surfaceAdventure.run.contactStage === 'gate' ? 'A/D: reach the moon-pickle gate · E: use the Translator Badge.'
                 : surfaceAdventure.run.contactStage === 'garden' ? 'A/D: approach the friendly alien · E: say hello.'
                   : 'First contact complete! Return left to the rocket and press E.'
-            : 'A/D: walk · Space: jetpack · E: board. Cross the vines → rescue → return left. Avoid flying too high.'
+            : surfaceAdventure.run.level.kind === 'theft'
+              ? surfaceAdventure.run.state === 'stealing'
+                ? 'Tiny aliens are stealing the rocket! Watch it leave, then continue right.'
+                : 'Rocket stolen. A/D: walk · Space: jetpack. Move right and find another way off.'
+              : 'A/D: walk · Space: jetpack · E: board. Cross the vines → rescue → return left. Avoid flying too high.'
       : 'Walk with A/D or arrows. Hold Space for the jetpack. Stay too high for too long and the black hole resets you to the rocket.';
   }
 }
@@ -1604,6 +1673,8 @@ function updateUi() {
 function resetExperience() {
   returningToStation = false;
   document.body.dataset.stationReturn = 'idle';
+  document.body.dataset.rocketTheftState = 'idle';
+  document.body.dataset.rocketTheftPlanet = '';
   leaveSurfaceAdventure();
   keys.clear();
   currentPlanetIndex = 0;
@@ -1618,6 +1689,7 @@ function resetExperience() {
   hasLeftLaunchpad = false;
   hasSwappedDestinationScene = false;
 
+  rocket.visible = true;
   rocket.position.set(0, START_Y, 0);
   rocket.rotation.set(0, 0, 0);
   astronaut.visible = false;

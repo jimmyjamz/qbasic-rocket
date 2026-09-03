@@ -5,12 +5,13 @@ export function createSurfaceAdventureView(createAstronaut, level = SPROUT_LEVEL
   const cinder = level.kind === 'steam';
   const frost = level.kind === 'ice';
   const contact = level.kind === 'aliens';
+  const theft = level.kind === 'theft';
   const group = new THREE.Group();
-  group.name = cinder ? 'cinderSurfaceAdventure' : frost ? 'frostSurfaceAdventure' : contact ? 'contactSurfaceAdventure' : 'sproutSurfaceAdventure';
+  group.name = cinder ? 'cinderSurfaceAdventure' : frost ? 'frostSurfaceAdventure' : contact ? 'contactSurfaceAdventure' : theft ? 'theftSurfaceAdventure' : 'sproutSurfaceAdventure';
   group.visible = false;
-  const soil = new THREE.MeshStandardMaterial({ color: cinder ? 0x914b32 : frost ? 0xaeddf4 : contact ? 0x56449d : 0x265b44, roughness: frost ? 0.3 : 0.85, metalness: frost ? 0.08 : 0 });
+  const soil = new THREE.MeshStandardMaterial({ color: cinder ? 0x914b32 : frost ? 0xaeddf4 : contact ? 0x56449d : theft ? 0x5b3f8f : 0x265b44, roughness: frost ? 0.3 : 0.85, metalness: frost ? 0.08 : 0 });
   const vine = new THREE.MeshStandardMaterial({ color: 0x64c779, roughness: 0.65 });
-  const glow = new THREE.MeshStandardMaterial({ color: 0xb4ffc3, emissive: 0x48aa65, emissiveIntensity: 0.3 });
+  const glow = new THREE.MeshStandardMaterial({ color: theft ? 0xffdd66 : 0xb4ffc3, emissive: theft ? 0xffdd66 : 0x48aa65, emissiveIntensity: theft ? 0.22 : 0.3 });
   const floor = new THREE.Mesh(new THREE.BoxGeometry(level.maxX - level.minX + 2, 0.6, 4.8), soil);
   floor.position.set((level.maxX + level.minX) / 2, -0.36, -0.8);
   group.add(floor);
@@ -18,35 +19,35 @@ export function createSurfaceAdventureView(createAstronaut, level = SPROUT_LEVEL
   const barrier = new THREE.Mesh(new THREE.BoxGeometry(2, SPROUT_LEVEL.obstacleHeight, 1.4), vine);
   barrier.position.set(9, SPROUT_LEVEL.obstacleHeight / 2 - 0.06, 0);
   group.add(barrier);
-  barrier.visible = !cinder && !frost && !contact;
+  barrier.visible = !cinder && !frost && !contact && !theft;
   for (let i = 0; i < 7; i++) {
     const leaf = new THREE.Mesh(new THREE.SphereGeometry(0.3, 12, 8), glow);
     leaf.scale.set(1, 0.3, 0.6);
     leaf.rotation.z = i % 2 ? 0.35 : -0.35;
     leaf.position.set(8.15 + i * 0.28, 0.6 + (i % 3) * 0.3, 0.76);
-    if (!cinder && !frost && !contact) group.add(leaf);
+    if (!cinder && !frost && !contact && !theft) group.add(leaf);
   }
   // Fixed decorative seed groves behind the single traversable obstacle.
   for (const x of [3, 5, 12, 15, 21]) {
     const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.1, 1.6, 8), vine);
     stem.position.set(x, 0.7, -2);
-    if (!cinder && !frost && !contact) group.add(stem);
+    if (!cinder && !frost && !contact && !theft) group.add(stem);
     const seed = new THREE.Mesh(new THREE.IcosahedronGeometry(0.42, 1), cinder ? soil : glow);
     seed.position.set(x, cinder ? 0.4 : 1.6, -2);
     if (cinder) seed.scale.set(0.8, 2, 0.8);
-    if (!frost && !contact) group.add(seed);
+    if (!frost && !contact && !theft) group.add(seed);
   }
   function sign(text, x, y, width = 4) {
     const canvas = document.createElement('canvas');
     canvas.width = 768;
     canvas.height = 128;
     const ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#102b29';
+    ctx.fillStyle = theft ? '#2d1744' : '#102b29';
     ctx.fillRect(0, 0, 768, 128);
-    ctx.strokeStyle = '#a2f2bd';
+    ctx.strokeStyle = theft ? '#ffdd66' : '#a2f2bd';
     ctx.lineWidth = 6;
     ctx.strokeRect(3, 3, 762, 122);
-    ctx.fillStyle = '#edfff3';
+    ctx.fillStyle = theft ? '#fff9d7' : '#edfff3';
     ctx.font = 'bold 42px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -60,8 +61,12 @@ export function createSurfaceAdventureView(createAstronaut, level = SPROUT_LEVEL
     return sprite;
   }
   sign('ROCKET · E', 0, 3.25, 1.9);
-  if (!cinder && !frost && !contact) sign('SPACE + MOVE', 9, 2.25, 2.2);
-  const beacon = sign(level.npcLabel, level.targetX, 1.7, 2);
+  if (!cinder && !frost && !contact && !theft) sign('SPACE + MOVE', 9, 2.25, 2.2);
+  if (theft) {
+    sign('TINY FOOTPRINTS?', 4.8, 2.0, 2.6);
+    sign('KEEP GOING →', 12.5, 2.1, 2.2);
+  }
+  const beacon = sign(level.npcLabel, level.targetX, 1.7, theft ? 3.0 : 2);
   const ventSigns = cinder ? [
     sign('WAIT · STEAM', 10, 2.1, 2.4),
     sign('GO · COOL', 10, 2.1, 2.4),
@@ -147,6 +152,39 @@ export function createSurfaceAdventureView(createAstronaut, level = SPROUT_LEVEL
     }
     return alien;
   }
+  function createMischiefAlien(index) {
+    const alien = new THREE.Group();
+    alien.name = `rocketThiefAlien${index + 1}`;
+    const yellow = new THREE.MeshStandardMaterial({ color: 0xffdd66, emissive: 0x5f3a00, emissiveIntensity: 0.18, roughness: 0.58 });
+    const dark = new THREE.MeshBasicMaterial({ color: 0x16111f });
+    const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.2, 0.28, 5, 10), yellow);
+    body.position.y = 0.36;
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.28, 14, 10), yellow);
+    head.scale.set(1.15, 0.82, 0.88);
+    head.position.y = 0.8;
+    alien.add(body, head);
+    for (const x of [-0.1, 0.1]) {
+      const eye = new THREE.Mesh(new THREE.SphereGeometry(0.045, 8, 6), dark);
+      eye.position.set(x, 0.83, 0.24);
+      alien.add(eye);
+    }
+    const hat = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.28, 5), yellow);
+    hat.position.y = 1.12;
+    hat.rotation.z = index % 2 ? 0.22 : -0.22;
+    alien.add(hat);
+    alien.scale.setScalar(0.9 + index * 0.05);
+    return alien;
+  }
+  function createWobblyTower(index) {
+    const tower = new THREE.Group();
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.2, 0.5, 7), glow);
+    base.position.y = 0.25;
+    const top = new THREE.Mesh(new THREE.ConeGeometry(0.2, 0.7 + (index % 3) * 0.1, 7), glow);
+    top.position.y = 0.86;
+    top.rotation.z = index % 2 ? 0.16 : -0.16;
+    tower.add(base, top);
+    return tower;
+  }
   const alienCrowd = new THREE.Group();
   const friendlyAlien = createAlien();
   const gardenGate = new THREE.Group();
@@ -176,13 +214,31 @@ export function createSurfaceAdventureView(createAstronaut, level = SPROUT_LEVEL
     group.add(gardenGate);
     gardenSign = sign('MOON-PICKLE GATE · E', level.gateX, 2.7, 3.2);
   }
+  const thiefCrew = new THREE.Group();
+  if (theft) {
+    for (let i = 0; i < 18; i += 1) {
+      const tower = createWobblyTower(i);
+      tower.position.set(-0.8 + i * 1.35, -0.16, -1.55 + Math.sin(i * 1.7) * 0.7);
+      tower.rotation.y = i * 0.61;
+      tower.userData.phase = i * 0.63;
+      group.add(tower);
+    }
+    [2.45, 2.9, 3.35].forEach((x, index) => {
+      const alien = createMischiefAlien(index);
+      alien.position.set(x, 0, index % 2 ? 0.42 : 0.05);
+      alien.userData.homeX = x;
+      alien.userData.phase = index * 1.07;
+      thiefCrew.add(alien);
+    });
+    group.add(thiefCrew);
+  }
   const portal = new THREE.Mesh(new THREE.TorusGeometry(0.65, 0.025, 8, 40), glow);
   portal.rotation.x = Math.PI / 2;
   portal.position.set(0, 0.01, 0);
   group.add(portal);
   const npc = createAstronaut();
   npc.children[0].material = npc.children[0].material.clone();
-  npc.children[0].material.color.setHex(cinder ? 0xffac55 : frost ? 0xbdefff : 0x83df9c);
+  npc.children[0].material.color.setHex(cinder ? 0xffac55 : frost ? 0xbdefff : theft ? 0xffdd66 : 0x83df9c);
   npc.scale.setScalar(0.85);
   npc.name = "surfaceRescueNpc";
   group.add(npc);
@@ -221,6 +277,7 @@ export function createSurfaceAdventureView(createAstronaut, level = SPROUT_LEVEL
       }
       if (contact) {
         const insideGarden = ['garden', 'welcomed'].includes(run.contactStage);
+        const showBlockade = run.contactStage === 'blocked';
         alienCrowd.visible = !insideGarden;
         friendlyAlien.visible = insideGarden;
         gardenGate.visible = run.contactStage !== 'welcomed';
@@ -240,21 +297,41 @@ export function createSurfaceAdventureView(createAstronaut, level = SPROUT_LEVEL
           const rightArm = alien.getObjectByName('rightAlienArm');
           leftArm.rotation.z = -0.38 - Math.sin(time * 6.1 + phase) * 0.28;
           rightArm.rotation.z = 0.38 + Math.cos(time * 5.4 + phase) * 0.28;
-          // The lead greeter mirrors jetpack height at the boundary so the
-          // all-altitude crowd collision is visible rather than an unseen wall.
-          alien.position.y = index === 0 ? Math.max(hop, run.player.y) : hop;
+          // Only the unresolved first-visit blockade mirrors jetpack height.
+          // Once the translator opens the gate, the crowd may fidget but never
+          // becomes a visible all-altitude blocker during the return path.
+          alien.position.y = index === 0 && showBlockade ? Math.max(hop, run.player.y) : hop;
         });
         const friendlyTime = performance.now() * 0.001;
         friendlyAlien.rotation.z = Math.sin(friendlyTime * 3) * 0.055;
         friendlyAlien.getObjectByName('leftAlienArm').rotation.z = -0.42;
         friendlyAlien.getObjectByName('rightAlienArm').rotation.z = 2.05 + Math.sin(friendlyTime * 7) * 0.22;
       }
+      if (theft) {
+        const time = performance.now() * 0.001;
+        const progress = run.theftBoardingProgress ?? run.theftProgress ?? 0;
+        const dash = THREE.MathUtils.smoothstep(progress, 0.08, 1);
+        const crewVisible = run.state === 'stealing' && (run.theftProgress ?? 0) <= 0.001;
+        thiefCrew.visible = crewVisible;
+        thiefCrew.children.forEach((alien, index) => {
+          const hop = Math.abs(Math.sin(time * (6.4 + index * 0.2) + alien.userData.phase)) * 0.16;
+          alien.position.x = THREE.MathUtils.lerp(alien.userData.homeX, 0.12 + index * 0.08, dash);
+          const boarded = dash > 0.94;
+          alien.position.y = hop + (boarded ? 0.72 + index * 0.14 : 0);
+          alien.rotation.z = Math.sin(time * 7.3 + index) * 0.18;
+          alien.visible = crewVisible;
+        });
+        group.children.forEach((child) => {
+          if (child.userData?.phase === undefined) return;
+          child.rotation.z = Math.sin(time * 1.8 + child.userData.phase) * 0.055;
+        });
+      }
       vortexStart = null;
       npc.scale.setScalar(0.85);
       npc.rotation.set(0, 0, 0);
-      npc.visible = !contact && run.state !== 'boarded';
+      npc.visible = !contact && !theft && run.state !== 'boarded';
       npc.position.set(run.npc.x, run.npc.y, 0.18);
-      beacon.visible = run.state === 'visible';
+      beacon.visible = theft ? run.state === 'stranded' : run.state === 'visible';
       npc.rotation.y = run.state === 'following' ? -0.22 : 0.22;
     }
   };
