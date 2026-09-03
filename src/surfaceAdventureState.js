@@ -22,9 +22,10 @@ export const CONTACT_LEVEL = Object.freeze({
 export const THEFT_LEVEL = Object.freeze({
   kind: 'theft', name: 'Sneakle-5', npcLabel: 'BROKEN UFO · NEEDS PARTS!',
   minX: -2, maxX: 27.5, targetX: 25, ufoX: 25, ufoApproachX: 21.7,
-  hatchX: 22.2, partX: 25.6, clueX: 10.5,
-  // RKT-69 keeps the first hatch-room beat within the proven visible UFO area.
-  // Extended underground traversal and hard jetpack obstacles are deferred.
+  hatchX: 22.2, partX: 25.6, partY: 1.45, partMinY: 1.05, clueX: 10.5,
+  // RKT-70 keeps the first part within the proven visible hatch area but raises it
+  // so the player must use a small jetpack hop instead of collecting it by walking.
+  // Extended underground traversal and hard blockers remain deferred.
   obstacleLeft: 99, obstacleRight: 100, obstacleHeight: 0, radius: 0.24
 });
 
@@ -105,9 +106,12 @@ export function createSurfaceRun(level = SPROUT_LEVEL) {
         run.player.y < 0.9;
     },
     get canCollectUfoPart() {
-      return level.kind === 'theft' && run.state === 'stranded' && ufoDiscovered && !ufoPartCollected &&
-        run.player.x >= level.partX - 0.55 &&
-        run.player.y < 1.4;
+      if (level.kind !== 'theft' || run.state !== 'stranded' || !ufoDiscovered || ufoPartCollected) return false;
+      const partMinY = level.partMinY ?? 0;
+      const partMaxY = level.partMaxY ?? 2.4;
+      return Math.abs(run.player.x - level.partX) < 0.65 &&
+        run.player.y >= partMinY &&
+        run.player.y <= partMaxY;
     },
     get canEnterGarden() { return level.kind === 'aliens' && contactStage === 'gate' && Math.abs(run.player.x - level.gateX) < 1.6 && run.player.y < 0.75; },
     get canWelcome() { return level.kind === 'aliens' && contactStage === 'garden' && Math.abs(run.player.x - level.targetX) < 1.25 && run.player.y < 0.75; },
