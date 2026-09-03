@@ -22,10 +22,10 @@ export const CONTACT_LEVEL = Object.freeze({
 export const THEFT_LEVEL = Object.freeze({
   kind: 'theft', name: 'Sneakle-5', npcLabel: 'BROKEN UFO · NEEDS PARTS!',
   minX: -2, maxX: 27.5, targetX: 25, ufoX: 25, ufoApproachX: 21.7,
-  hatchX: 22.2, hatchPanelX: 25.6, hatchPanelY: 1.45, hatchPanelMinY: 1.05,
-  missingPartLabel: 'WOBBLE COIL', clueX: 10.5,
+  hatchX: 22.2, hatchPanelX: 25.6, hatchPanelY: 1.45, hatchPanelMinY: 0.85,
+  hatchPanelMaxY: 5.0, hatchPanelRadiusX: 1.05, missingPartLabel: 'WOBBLE COIL', clueX: 10.5,
   // RKT-70 uses a raised hatch diagnostic panel, not a repair part sitting on the UFO.
-  // The missing repair part should be found somewhere else in a later slice.
+  // The inspection zone is forgiving so a kid-friendly hover near the blinking panel works.
   // Extended underground traversal and hard blockers remain deferred.
   obstacleLeft: 99, obstacleRight: 100, obstacleHeight: 0, radius: 0.24
 });
@@ -109,8 +109,9 @@ export function createSurfaceRun(level = SPROUT_LEVEL) {
     get canInspectHatchPanel() {
       if (level.kind !== 'theft' || run.state !== 'stranded' || !ufoDiscovered || ufoHatchInspected) return false;
       const panelMinY = level.hatchPanelMinY ?? 0;
-      const panelMaxY = level.hatchPanelMaxY ?? 2.4;
-      return Math.abs(run.player.x - level.hatchPanelX) < 0.65 &&
+      const panelMaxY = level.hatchPanelMaxY ?? 5.0;
+      const panelRadiusX = level.hatchPanelRadiusX ?? 1.05;
+      return Math.abs(run.player.x - level.hatchPanelX) < panelRadiusX &&
         run.player.y >= panelMinY &&
         run.player.y <= panelMaxY;
     },
