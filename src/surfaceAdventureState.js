@@ -71,9 +71,11 @@ export function resolveSurfaceMovement(previous, proposed, level = SPROUT_LEVEL,
     else if (previous.x >= right) x = right;
     // An already admitted character may always leave; no damage or trapping.
   }
-  const obstacleResult = applyLowObstacleCollision(previous, x, y, left, right, level.obstacleHeight);
-  x = obstacleResult.x;
-  y = obstacleResult.y;
+  if (level.kind !== 'steam' && !(level.kind === 'ice' && ventSafe)) {
+    const obstacleResult = applyLowObstacleCollision(previous, x, y, left, right, level.obstacleHeight);
+    x = obstacleResult.x;
+    y = obstacleResult.y;
+  }
 
   if (level.kind === 'theft' && Number.isFinite(level.ufoBodyLeft) && Number.isFinite(level.ufoBodyRight)) {
     const bodyLeft = level.ufoBodyLeft - level.radius;
