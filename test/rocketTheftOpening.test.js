@@ -76,6 +76,8 @@ test('hatch diagnostic panel stays near the visible hatch area but is raised for
   assert.ok(THEFT_LEVEL.maxX < 30);
   assert.ok(THEFT_LEVEL.hatchPanelMinY > 0.75);
   assert.ok(THEFT_LEVEL.hatchPanelY > THEFT_LEVEL.hatchPanelMinY);
+  assert.ok(THEFT_LEVEL.hatchPanelMaxY > THEFT_LEVEL.hatchPanelY);
+  assert.ok(THEFT_LEVEL.hatchPanelRadiusX > 0.65);
 });
 
 test('nearby hatch-area diagnostic panel requires a small jetpack hop to inspect', () => {
@@ -100,7 +102,7 @@ test('nearby hatch-area diagnostic panel requires a small jetpack hop to inspect
   assert.equal(run.ufoHatchInspected, false);
   assert.equal(run.objective, 'INSPECT UFO HATCH');
 
-  run.update(0.16, { x: THEFT_LEVEL.hatchPanelX, y: THEFT_LEVEL.hatchPanelMinY + 0.1 });
+  run.update(0.16, { x: THEFT_LEVEL.hatchPanelX + THEFT_LEVEL.hatchPanelRadiusX - 0.08, y: THEFT_LEVEL.hatchPanelMaxY - 0.2 });
   assert.equal(run.ufoHatchInspected, true);
   assert.equal(run.objective, 'FIND MISSING PART');
   assert.equal(run.state, 'stranded');
