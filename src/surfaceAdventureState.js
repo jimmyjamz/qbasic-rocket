@@ -20,8 +20,8 @@ export const CONTACT_LEVEL = Object.freeze({
   obstacleHeight: 0, radius: 0.24
 });
 export const THEFT_LEVEL = Object.freeze({
-  kind: 'theft', name: 'Sneakle-5', npcLabel: 'FIND ANOTHER WAY OFF →',
-  minX: -2, maxX: 24, targetX: 18, obstacleLeft: 99, obstacleRight: 100,
+  kind: 'theft', name: 'Sneakle-5', npcLabel: 'BROKEN UFO AHEAD →',
+  minX: -2, maxX: 30, targetX: 25, ufoX: 25, ufoApproachX: 21.7, clueX: 10.5, obstacleLeft: 99, obstacleRight: 100,
   obstacleHeight: 0, radius: 0.24
 });
 
@@ -71,6 +71,7 @@ export function createSurfaceRun(level = SPROUT_LEVEL) {
   let theftClock = 0;
   let theftProgress = 0;
   let theftBoardingProgress = 0;
+  let ufoDiscovered = false;
   const run = {
     level,
     get hasPickaxe() { return hasPickaxe; },
@@ -79,7 +80,8 @@ export function createSurfaceRun(level = SPROUT_LEVEL) {
     get objective() {
       if (level.kind === 'theft') {
         if (run.state === 'stealing') return 'ROCKET THEFT!';
-        if (run.state === 'stranded') return 'FIND ANOTHER WAY OFF';
+        if (ufoDiscovered) return 'FIND UFO PARTS';
+        if (run.state === 'stranded') return 'FIND BROKEN UFO';
         return 'SCOUT LANDING ZONE';
       }
       return columnBroken ? 'RESCUE EXPLORER' : hasPickaxe ? 'BREAK ICE COLUMN' : 'FIND PICKAXE';
@@ -88,6 +90,13 @@ export function createSurfaceRun(level = SPROUT_LEVEL) {
     get contactStage() { return contactStage; },
     get theftProgress() { return theftProgress; },
     get theftBoardingProgress() { return theftBoardingProgress; },
+    get ufoDiscovered() { return ufoDiscovered; },
+    get canInspectUfo() {
+      return level.kind === 'theft' && run.state === 'stranded' &&
+        run.player.x >= (level.ufoApproachX ?? level.ufoX - 1.4) &&
+        run.player.x <= level.ufoX + 1.8 &&
+        run.player.y < 0.9;
+    },
     get canEnterGarden() { return level.kind === 'aliens' && contactStage === 'gate' && Math.abs(run.player.x - level.gateX) < 1.6 && run.player.y < 0.75; },
     get canWelcome() { return level.kind === 'aliens' && contactStage === 'garden' && Math.abs(run.player.x - level.targetX) < 1.25 && run.player.y < 0.75; },
     prepareContact(hasTranslator, completed = false) {
@@ -101,6 +110,7 @@ export function createSurfaceRun(level = SPROUT_LEVEL) {
         theftClock = 0;
         theftProgress = 0;
         theftBoardingProgress = 0;
+        ufoDiscovered = false;
       }
     },
     tick(dt, player) {
@@ -129,6 +139,7 @@ export function createSurfaceRun(level = SPROUT_LEVEL) {
       theftClock = 0;
       theftProgress = 0;
       theftBoardingProgress = 0;
+      ufoDiscovered = false;
     },
     update(dt, player) {
       clock += dt;
@@ -143,6 +154,12 @@ export function createSurfaceRun(level = SPROUT_LEVEL) {
             : Math.min(1, (overallProgress - THEFT_LAUNCH_PROGRESS) / (1 - THEFT_LAUNCH_PROGRESS));
           run.progress = Math.round(overallProgress * 100);
           if (overallProgress >= 1) run.state = 'stranded';
+        } else if (run.state === 'stranded') {
+          run.progress = Math.max(0, Math.min(ufoDiscovered ? 100 : 99, player.x / (level.ufoApproachX ?? level.ufoX) * 100));
+          if (!ufoDiscovered && run.canInspectUfo) {
+            ufoDiscovered = true;
+            run.progress = 100;
+          }
         }
         return;
       }

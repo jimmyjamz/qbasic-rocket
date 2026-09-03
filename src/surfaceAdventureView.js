@@ -64,9 +64,10 @@ export function createSurfaceAdventureView(createAstronaut, level = SPROUT_LEVEL
   if (!cinder && !frost && !contact && !theft) sign('SPACE + MOVE', 9, 2.25, 2.2);
   if (theft) {
     sign('TINY FOOTPRINTS?', 4.8, 2.0, 2.6);
-    sign('KEEP GOING →', 12.5, 2.1, 2.2);
   }
-  const beacon = sign(level.npcLabel, level.targetX, 1.7, theft ? 3.0 : 2);
+  const beacon = theft
+    ? sign('BROKEN UFO · NEEDS PARTS!', level.ufoX + 1.1, 2.35, 3.8)
+    : sign(level.npcLabel, level.targetX, 1.7, 2);
   const ventSigns = cinder ? [
     sign('WAIT · STEAM', 10, 2.1, 2.4),
     sign('GO · COOL', 10, 2.1, 2.4),
@@ -185,6 +186,50 @@ export function createSurfaceAdventureView(createAstronaut, level = SPROUT_LEVEL
     tower.add(base, top);
     return tower;
   }
+  function createBrokenUfo() {
+    const ufo = new THREE.Group();
+    const hull = new THREE.MeshStandardMaterial({ color: 0xd7d5ff, roughness: 0.32, metalness: 0.55 });
+    const underside = new THREE.MeshStandardMaterial({ color: 0x44306f, roughness: 0.45, metalness: 0.2 });
+    const crack = new THREE.MeshBasicMaterial({ color: 0x14091f });
+    const smoke = new THREE.MeshBasicMaterial({ color: 0x6b6383, transparent: true, opacity: 0.34, depthWrite: false });
+    const saucer = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.85, 0.34, 40), hull);
+    saucer.position.y = 0.72;
+    saucer.scale.z = 0.62;
+    ufo.add(saucer);
+    const dome = new THREE.Mesh(new THREE.SphereGeometry(0.74, 24, 12), glow);
+    dome.position.y = 1.02;
+    dome.scale.set(1, 0.48, 0.7);
+    ufo.add(dome);
+    const brokenPanel = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.08, 0.08), crack);
+    brokenPanel.position.set(-0.45, 0.95, 0.52);
+    brokenPanel.rotation.z = -0.62;
+    ufo.add(brokenPanel);
+    const loosePanel = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.12, 0.48), underside);
+    loosePanel.position.set(1.05, 0.34, -0.08);
+    loosePanel.rotation.z = -0.75;
+    loosePanel.rotation.y = 0.4;
+    ufo.add(loosePanel);
+    for (const x of [-1.05, 0.2, 1.0]) {
+      const foot = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.065, 0.7, 8), underside);
+      foot.position.set(x, 0.05, x === 0.2 ? 0.42 : -0.22);
+      foot.rotation.z = x * 0.16;
+      ufo.add(foot);
+    }
+    for (let i = 0; i < 5; i += 1) {
+      const puff = new THREE.Mesh(new THREE.SphereGeometry(0.18 + i * 0.04, 10, 8), smoke);
+      puff.position.set(-0.95 + i * 0.18, 1.18 + i * 0.28, -0.18);
+      puff.userData.smokePhase = i * 0.8;
+      ufo.add(puff);
+    }
+    for (let i = 0; i < 4; i += 1) {
+      const spark = new THREE.Mesh(new THREE.IcosahedronGeometry(0.07, 0), glow);
+      spark.position.set(0.85 + i * 0.1, 0.78 + (i % 2) * 0.18, 0.54);
+      spark.userData.sparkPhase = i * 0.9;
+      ufo.add(spark);
+    }
+    ufo.rotation.z = -0.18;
+    return ufo;
+  }
   const alienCrowd = new THREE.Group();
   const friendlyAlien = createAlien();
   const gardenGate = new THREE.Group();
@@ -215,8 +260,9 @@ export function createSurfaceAdventureView(createAstronaut, level = SPROUT_LEVEL
     gardenSign = sign('MOON-PICKLE GATE · E', level.gateX, 2.7, 3.2);
   }
   const thiefCrew = new THREE.Group();
+  const brokenUfo = new THREE.Group();
   if (theft) {
-    for (let i = 0; i < 18; i += 1) {
+    for (let i = 0; i < 20; i += 1) {
       const tower = createWobblyTower(i);
       tower.position.set(-0.8 + i * 1.35, -0.16, -1.55 + Math.sin(i * 1.7) * 0.7);
       tower.rotation.y = i * 0.61;
@@ -231,6 +277,11 @@ export function createSurfaceAdventureView(createAstronaut, level = SPROUT_LEVEL
       thiefCrew.add(alien);
     });
     group.add(thiefCrew);
+    const ufo = createBrokenUfo();
+    brokenUfo.add(ufo);
+    brokenUfo.position.set(level.ufoX, 0, -0.12);
+    brokenUfo.visible = false;
+    group.add(brokenUfo);
   }
   const portal = new THREE.Mesh(new THREE.TorusGeometry(0.65, 0.025, 8, 40), glow);
   portal.rotation.x = Math.PI / 2;
@@ -240,7 +291,7 @@ export function createSurfaceAdventureView(createAstronaut, level = SPROUT_LEVEL
   npc.children[0].material = npc.children[0].material.clone();
   npc.children[0].material.color.setHex(cinder ? 0xffac55 : frost ? 0xbdefff : theft ? 0xffdd66 : 0x83df9c);
   npc.scale.setScalar(0.85);
-  npc.name = "surfaceRescueNpc";
+  npc.name = 'surfaceRescueNpc';
   group.add(npc);
   let vortexStart = null;
   return {
@@ -320,6 +371,20 @@ export function createSurfaceAdventureView(createAstronaut, level = SPROUT_LEVEL
           alien.position.y = hop + (boarded ? 0.72 + index * 0.14 : 0);
           alien.rotation.z = Math.sin(time * 7.3 + index) * 0.18;
           alien.visible = crewVisible;
+        });
+        brokenUfo.visible = run.state === 'stranded';
+        brokenUfo.rotation.z = -0.18 + Math.sin(time * 1.6) * 0.025;
+        brokenUfo.children.forEach((child) => {
+          child.children.forEach((part) => {
+            if (part.userData?.smokePhase !== undefined) {
+              part.position.y += Math.sin(time * 1.8 + part.userData.smokePhase) * 0.0015;
+              part.material.opacity = 0.24 + Math.abs(Math.sin(time * 1.6 + part.userData.smokePhase)) * 0.18;
+            }
+            if (part.userData?.sparkPhase !== undefined) {
+              part.visible = Math.sin(time * 10 + part.userData.sparkPhase) > -0.2;
+              part.scale.setScalar(0.75 + Math.abs(Math.sin(time * 8 + part.userData.sparkPhase)) * 0.55);
+            }
+          });
         });
         group.children.forEach((child) => {
           if (child.userData?.phase === undefined) return;
