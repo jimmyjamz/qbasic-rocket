@@ -66,7 +66,7 @@ test('stranded Sneakle traversal discovers the broken UFO from the left-side app
   assert.equal(run.state, 'stranded');
 });
 
-test('first UFO part stays near the visible hatch area until extended traversal is rebuilt', () => {
+test('first UFO part stays near the visible hatch area but is raised for a jetpack hop', () => {
   assert.ok(THEFT_LEVEL.hatchX < THEFT_LEVEL.ufoX);
   assert.equal(THEFT_LEVEL.obstacleHeight, 0);
   assert.ok(THEFT_LEVEL.obstacleLeft > THEFT_LEVEL.maxX);
@@ -74,9 +74,11 @@ test('first UFO part stays near the visible hatch area until extended traversal 
   assert.ok(THEFT_LEVEL.partX < THEFT_LEVEL.ufoX + 2.5);
   assert.ok(THEFT_LEVEL.partX <= 27.2);
   assert.ok(THEFT_LEVEL.maxX < 30);
+  assert.ok(THEFT_LEVEL.partMinY > 0.75);
+  assert.ok(THEFT_LEVEL.partY > THEFT_LEVEL.partMinY);
 });
 
-test('nearby hatch-area UFO part can be collected without extended rightward traversal', () => {
+test('nearby hatch-area UFO part requires a small jetpack hop to collect', () => {
   const run = createSurfaceRun(THEFT_LEVEL);
   run.startTheft();
   run.update(THEFT_SEQUENCE_SECONDS, { x: 1, y: 0 });
@@ -87,14 +89,18 @@ test('nearby hatch-area UFO part can be collected without extended rightward tra
 
   const clearEntrance = resolveSurfaceMovement(
     { x: THEFT_LEVEL.ufoX - 0.25, y: 0 },
-    { x: THEFT_LEVEL.partX - 0.45, y: 0 },
+    { x: THEFT_LEVEL.partX - 0.05, y: 0 },
     THEFT_LEVEL,
     false
   );
   assert.equal(clearEntrance.blockedX, false);
   assert.ok(clearEntrance.x > THEFT_LEVEL.ufoX - 0.25);
 
-  run.update(0.16, { x: THEFT_LEVEL.partX + 0.05, y: 0 });
+  run.update(0.16, { x: THEFT_LEVEL.partX, y: 0 });
+  assert.equal(run.ufoPartCollected, false);
+  assert.equal(run.objective, 'FIND UFO PART');
+
+  run.update(0.16, { x: THEFT_LEVEL.partX, y: THEFT_LEVEL.partMinY + 0.1 });
   assert.equal(run.ufoPartCollected, true);
   assert.equal(run.objective, 'UFO PART FOUND');
   assert.equal(run.state, 'stranded');
