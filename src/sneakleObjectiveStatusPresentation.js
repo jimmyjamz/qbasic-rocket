@@ -19,11 +19,11 @@ function getSneakleMission(run) {
 
   if (run.ufoDiscovered) {
     return {
-      title: 'Search the hatch room',
-      objective: 'Use the hatch and jetpack through the underground room to reach the blinking UFO part.',
+      title: 'Reach the hatch ledge',
+      objective: 'Use the jetpack to hop up and touch the blinking UFO part.',
       badge: 'Parts',
       action: 'Find UFO part',
-      help: 'Broken UFO found. Use the hatch and jetpack through the underground room to reach the blinking part.'
+      help: 'Broken UFO found. Jetpack up to the blinking part on the hatch-room ledge.'
     };
   }
 
