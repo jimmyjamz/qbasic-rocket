@@ -81,6 +81,8 @@ test('hatch diagnostic panel stays near the visible hatch area but is raised for
   assert.ok(THEFT_LEVEL.ufoBodyLeft < THEFT_LEVEL.ufoX);
   assert.ok(THEFT_LEVEL.ufoBodyRight > THEFT_LEVEL.ufoX);
   assert.ok(THEFT_LEVEL.ufoBodyHeight > 0.9);
+  assert.ok(THEFT_LEVEL.wobbleCoilX < THEFT_LEVEL.ufoApproachX - 2);
+  assert.ok(THEFT_LEVEL.wobbleCoilX > THEFT_LEVEL.minX);
 });
 
 test('nearby hatch-area diagnostic panel requires a small jetpack hop to inspect', () => {
@@ -116,6 +118,33 @@ test('nearby hatch-area diagnostic panel requires a small jetpack hop to inspect
   run.update(0.16, { x: THEFT_LEVEL.hatchPanelX + THEFT_LEVEL.hatchPanelRadiusX - 0.08, y: THEFT_LEVEL.ufoBodyHeight + 0.1 });
   assert.equal(run.ufoHatchInspected, true);
   assert.equal(run.objective, 'FIND MISSING PART');
+  assert.equal(run.state, 'stranded');
+});
+
+test('Sneakle Wobble Coil must be found away from the UFO and installed at the hatch', () => {
+  const run = createSurfaceRun(THEFT_LEVEL);
+  run.startTheft();
+  run.update(THEFT_SEQUENCE_SECONDS, { x: 1, y: 0 });
+  run.update(0.16, { x: THEFT_LEVEL.ufoApproachX + 0.05, y: 0 });
+  assert.equal(run.ufoDiscovered, true);
+  assert.equal(run.objective, 'INSPECT UFO HATCH');
+
+  run.update(0.16, { x: THEFT_LEVEL.wobbleCoilX, y: THEFT_LEVEL.wobbleCoilY });
+  assert.equal(run.wobbleCoilCollected, false);
+  assert.equal(run.objective, 'INSPECT UFO HATCH');
+
+  run.update(0.16, { x: THEFT_LEVEL.hatchPanelX + THEFT_LEVEL.hatchPanelRadiusX - 0.08, y: THEFT_LEVEL.ufoBodyHeight + 0.1 });
+  assert.equal(run.ufoHatchInspected, true);
+  assert.equal(run.objective, 'FIND MISSING PART');
+
+  run.update(0.16, { x: THEFT_LEVEL.wobbleCoilX, y: THEFT_LEVEL.wobbleCoilY });
+  assert.equal(run.wobbleCoilCollected, true);
+  assert.equal(run.wobbleCoilInstalled, false);
+  assert.equal(run.objective, 'RETURN TO UFO');
+
+  run.update(0.16, { x: THEFT_LEVEL.hatchX + 0.1, y: 0 });
+  assert.equal(run.wobbleCoilInstalled, true);
+  assert.equal(run.objective, 'WOBBLE COIL INSTALLED');
   assert.equal(run.state, 'stranded');
 });
 
