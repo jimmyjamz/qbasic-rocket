@@ -23,9 +23,11 @@ export const THEFT_LEVEL = Object.freeze({
   kind: 'theft', name: 'Sneakle-5', npcLabel: 'BROKEN UFO · NEEDS PARTS!',
   minX: -2, maxX: 27.5, targetX: 25, ufoX: 25, ufoApproachX: 21.7,
   hatchX: 22.2, hatchPanelX: 25.6, hatchPanelY: 1.45, hatchPanelMinY: 0.85,
-  hatchPanelMaxY: 5.0, hatchPanelRadiusX: 1.05, missingPartLabel: 'WOBBLE COIL', clueX: 10.5,
+  hatchPanelMaxY: 5.0, hatchPanelRadiusX: 1.05, missingPartLabel: 'WOBBLE COIL',
+  wobbleCoilX: 16.4, wobbleCoilY: 0.42, wobbleCoilCollectRadius: 0.75, clueX: 10.5,
   ufoBodyLeft: 23.45, ufoBodyRight: 26.35, ufoBodyHeight: 1.12,
   // RKT-70 uses a raised hatch diagnostic panel, not a repair part sitting on the UFO.
+  // RKT-72 places the Wobble Coil away from the UFO so the player must search and return.
   // The crashed UFO blocks ground walking so the player cannot pass through the saucer.
   // The inspection zone remains forgiving so a kid-friendly hover near the panel works.
   // Extended underground traversal and hard blockers remain deferred.
@@ -102,6 +104,8 @@ export function createSurfaceRun(level = SPROUT_LEVEL) {
   let theftBoardingProgress = 0;
   let ufoDiscovered = false;
   let ufoHatchInspected = false;
+  let wobbleCoilCollected = false;
+  let wobbleCoilInstalled = false;
   const run = {
     level,
     get hasPickaxe() { return hasPickaxe; },
@@ -110,6 +114,8 @@ export function createSurfaceRun(level = SPROUT_LEVEL) {
     get objective() {
       if (level.kind === 'theft') {
         if (run.state === 'stealing') return 'ROCKET THEFT!';
+        if (wobbleCoilInstalled) return 'WOBBLE COIL INSTALLED';
+        if (wobbleCoilCollected) return 'RETURN TO UFO';
         if (ufoHatchInspected) return 'FIND MISSING PART';
         if (ufoDiscovered) return 'INSPECT UFO HATCH';
         if (run.state === 'stranded') return 'FIND BROKEN UFO';
@@ -123,6 +129,8 @@ export function createSurfaceRun(level = SPROUT_LEVEL) {
     get theftBoardingProgress() { return theftBoardingProgress; },
     get ufoDiscovered() { return ufoDiscovered; },
     get ufoHatchInspected() { return ufoHatchInspected; },
+    get wobbleCoilCollected() { return wobbleCoilCollected; },
+    get wobbleCoilInstalled() { return wobbleCoilInstalled; },
     get theftArea() { return ufoDiscovered ? 'underground' : 'surface'; },
     get canInspectUfo() {
       return level.kind === 'theft' && run.state === 'stranded' &&
@@ -139,6 +147,18 @@ export function createSurfaceRun(level = SPROUT_LEVEL) {
         run.player.y >= panelMinY &&
         run.player.y <= panelMaxY;
     },
+    get canCollectWobbleCoil() {
+      if (level.kind !== 'theft' || run.state !== 'stranded' || !ufoHatchInspected || wobbleCoilCollected) return false;
+      const partX = level.wobbleCoilX ?? level.clueX ?? 12;
+      const partY = level.wobbleCoilY ?? 0;
+      const radius = level.wobbleCoilCollectRadius ?? 0.75;
+      return Math.abs(run.player.x - partX) < radius && Math.abs(run.player.y - partY) < 0.9;
+    },
+    get canInstallWobbleCoil() {
+      if (level.kind !== 'theft' || run.state !== 'stranded' || !wobbleCoilCollected || wobbleCoilInstalled) return false;
+      const hatchX = level.hatchX ?? level.ufoApproachX ?? level.ufoX;
+      return Math.abs(run.player.x - hatchX) < 1.15 && run.player.y < 0.95;
+    },
     get canEnterGarden() { return level.kind === 'aliens' && contactStage === 'gate' && Math.abs(run.player.x - level.gateX) < 1.6 && run.player.y < 0.75; },
     get canWelcome() { return level.kind === 'aliens' && contactStage === 'garden' && Math.abs(run.player.x - level.targetX) < 1.25 && run.player.y < 0.75; },
     prepareContact(hasTranslator, completed = false) {
@@ -154,6 +174,8 @@ export function createSurfaceRun(level = SPROUT_LEVEL) {
         theftBoardingProgress = 0;
         ufoDiscovered = false;
         ufoHatchInspected = false;
+        wobbleCoilCollected = false;
+        wobbleCoilInstalled = false;
       }
     },
     tick(dt, player) {
@@ -184,6 +206,8 @@ export function createSurfaceRun(level = SPROUT_LEVEL) {
       theftBoardingProgress = 0;
       ufoDiscovered = false;
       ufoHatchInspected = false;
+      wobbleCoilCollected = false;
+      wobbleCoilInstalled = false;
     },
     update(dt, player) {
       clock += dt;
@@ -210,6 +234,22 @@ export function createSurfaceRun(level = SPROUT_LEVEL) {
             run.progress = Math.max(0, Math.min(99, (player.x - roomStart) / (level.hatchPanelX - roomStart) * 100));
             if (run.canInspectHatchPanel) {
               ufoHatchInspected = true;
+              run.progress = 100;
+            }
+          } else if (!wobbleCoilCollected) {
+            const partX = level.wobbleCoilX ?? level.clueX ?? 12;
+            const roomStart = level.hatchPanelX ?? level.ufoX;
+            run.progress = Math.max(0, Math.min(99, (roomStart - player.x) / Math.max(1, roomStart - partX) * 100));
+            if (run.canCollectWobbleCoil) {
+              wobbleCoilCollected = true;
+              run.progress = 0;
+            }
+          } else if (!wobbleCoilInstalled) {
+            const partX = level.wobbleCoilX ?? level.clueX ?? 12;
+            const hatchX = level.hatchX ?? level.ufoApproachX ?? level.ufoX;
+            run.progress = Math.max(0, Math.min(99, (player.x - partX) / Math.max(1, hatchX - partX) * 100));
+            if (run.canInstallWobbleCoil) {
+              wobbleCoilInstalled = true;
               run.progress = 100;
             }
           } else {
