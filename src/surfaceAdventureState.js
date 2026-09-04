@@ -29,10 +29,14 @@ export const THEFT_LEVEL = Object.freeze({
   wobbleCoilPlatformXs: [18.8, 17.0, 15.2, 13.4, 11.6, 9.8],
   wobbleCoilPlatformStartY: 0.78, wobbleCoilPlatformStepY: 0.34,
   wobbleCoilPlatformWidth: 1.25, wobbleCoilShelfWidth: 1.9,
-  wobbleCoilPlatformThickness: 0.24, clueX: 10.5,
+  wobbleCoilPlatformThickness: 0.24,
+  backpackX: 4.4, backpackY: 0, backpackRadius: 0.9, cheetosLabel: 'CHEETOS',
+  tradeAlienX: 18.9, tradeAlienY: 0, tradeAlienRadius: 1.15,
+  slimeLabel: 'ICKY STICKY SLIME', fluxCapacitorLabel: 'FLUX CAPACITOR', clueX: 10.5,
   ufoBodyLeft: 23.45, ufoBodyRight: 26.35, ufoBodyHeight: 1.12,
   // RKT-70 uses a raised hatch diagnostic panel, not a repair part sitting on the UFO.
   // RKT-72 places the Wobble Coil on an elevated scrap route so it is not a simple left/right pickup.
+  // RKT-73 starts the backpack/Cheetos/weird alien trade chain for the Flux Capacitor.
   // The crashed UFO blocks ground walking so the player cannot pass through the saucer.
   // The inspection zone remains forgiving so a kid-friendly hover near the panel works.
   // Extended underground traversal and hard blockers remain deferred.
@@ -205,6 +209,11 @@ export function createSurfaceRun(level = SPROUT_LEVEL) {
   let ufoHatchInspected = false;
   let wobbleCoilCollected = false;
   let wobbleCoilInstalled = false;
+  let backpackRecovered = false;
+  let hasCheetos = false;
+  let cheetosTraded = false;
+  let stickySlimeReceived = false;
+  let fluxCapacitorCollected = false;
   const run = {
     level,
     get hasPickaxe() { return hasPickaxe; },
@@ -213,7 +222,9 @@ export function createSurfaceRun(level = SPROUT_LEVEL) {
     get objective() {
       if (level.kind === 'theft') {
         if (run.state === 'stealing') return 'ROCKET THEFT!';
-        if (wobbleCoilInstalled) return 'WOBBLE COIL INSTALLED';
+        if (fluxCapacitorCollected) return 'FLUX CAPACITOR FOUND';
+        if (hasCheetos) return 'TRADE CHEETOS';
+        if (wobbleCoilInstalled) return 'FIND BACKPACK';
         if (wobbleCoilCollected) return 'RETURN TO UFO';
         if (ufoHatchInspected) return 'FIND MISSING PART';
         if (ufoDiscovered) return 'INSPECT UFO HATCH';
@@ -230,6 +241,11 @@ export function createSurfaceRun(level = SPROUT_LEVEL) {
     get ufoHatchInspected() { return ufoHatchInspected; },
     get wobbleCoilCollected() { return wobbleCoilCollected; },
     get wobbleCoilInstalled() { return wobbleCoilInstalled; },
+    get backpackRecovered() { return backpackRecovered; },
+    get hasCheetos() { return hasCheetos; },
+    get cheetosTraded() { return cheetosTraded; },
+    get stickySlimeReceived() { return stickySlimeReceived; },
+    get fluxCapacitorCollected() { return fluxCapacitorCollected; },
     get theftArea() { return ufoDiscovered ? 'underground' : 'surface'; },
     get canInspectUfo() {
       return level.kind === 'theft' && run.state === 'stranded' &&
@@ -265,6 +281,18 @@ export function createSurfaceRun(level = SPROUT_LEVEL) {
       const hatchX = level.hatchX ?? level.ufoApproachX ?? level.ufoX;
       return Math.abs(run.player.x - hatchX) < 1.15 && run.player.y < 0.95;
     },
+    get canCollectBackpack() {
+      if (level.kind !== 'theft' || run.state !== 'stranded' || !wobbleCoilInstalled || hasCheetos) return false;
+      const backpackX = level.backpackX ?? 4;
+      const radius = level.backpackRadius ?? 0.85;
+      return Math.abs(run.player.x - backpackX) < radius && run.player.y < 0.85;
+    },
+    get canTradeCheetos() {
+      if (level.kind !== 'theft' || run.state !== 'stranded' || !hasCheetos || fluxCapacitorCollected) return false;
+      const alienX = level.tradeAlienX ?? 18;
+      const radius = level.tradeAlienRadius ?? 1.1;
+      return Math.abs(run.player.x - alienX) < radius && run.player.y < 1.05;
+    },
     get canEnterGarden() { return level.kind === 'aliens' && contactStage === 'gate' && Math.abs(run.player.x - level.gateX) < 1.6 && run.player.y < 0.75; },
     get canWelcome() { return level.kind === 'aliens' && contactStage === 'garden' && Math.abs(run.player.x - level.targetX) < 1.25 && run.player.y < 0.75; },
     prepareContact(hasTranslator, completed = false) {
@@ -282,6 +310,11 @@ export function createSurfaceRun(level = SPROUT_LEVEL) {
         ufoHatchInspected = false;
         wobbleCoilCollected = false;
         wobbleCoilInstalled = false;
+        backpackRecovered = false;
+        hasCheetos = false;
+        cheetosTraded = false;
+        stickySlimeReceived = false;
+        fluxCapacitorCollected = false;
       }
     },
     tick(dt, player) {
@@ -314,6 +347,11 @@ export function createSurfaceRun(level = SPROUT_LEVEL) {
       ufoHatchInspected = false;
       wobbleCoilCollected = false;
       wobbleCoilInstalled = false;
+      backpackRecovered = false;
+      hasCheetos = false;
+      cheetosTraded = false;
+      stickySlimeReceived = false;
+      fluxCapacitorCollected = false;
     },
     update(dt, player) {
       clock += dt;
@@ -356,6 +394,26 @@ export function createSurfaceRun(level = SPROUT_LEVEL) {
             run.progress = Math.max(0, Math.min(99, (player.x - partX) / Math.max(1, hatchX - partX) * 100));
             if (run.canInstallWobbleCoil) {
               wobbleCoilInstalled = true;
+              run.progress = 0;
+            }
+          } else if (!hasCheetos) {
+            const hatchX = level.hatchX ?? level.ufoApproachX ?? level.ufoX;
+            const backpackX = level.backpackX ?? 4;
+            run.progress = Math.max(0, Math.min(99, (hatchX - player.x) / Math.max(1, hatchX - backpackX) * 100));
+            if (run.canCollectBackpack) {
+              backpackRecovered = true;
+              hasCheetos = true;
+              run.progress = 0;
+            }
+          } else if (!fluxCapacitorCollected) {
+            const backpackX = level.backpackX ?? 4;
+            const alienX = level.tradeAlienX ?? 18;
+            run.progress = Math.max(0, Math.min(99, (player.x - backpackX) / Math.max(1, alienX - backpackX) * 100));
+            if (run.canTradeCheetos) {
+              cheetosTraded = true;
+              hasCheetos = false;
+              stickySlimeReceived = true;
+              fluxCapacitorCollected = true;
               run.progress = 100;
             }
           } else {
