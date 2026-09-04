@@ -60,6 +60,7 @@ function createUndergroundOverlay() {
   const panelMaterial = new THREE.MeshStandardMaterial({ color: 0x7df5ff, emissive: 0x38c8ff, emissiveIntensity: 0.6, metalness: 0.2, roughness: 0.25 });
   const coilMaterial = new THREE.MeshStandardMaterial({ color: 0xff8a2a, emissive: 0xff5c22, emissiveIntensity: 0.55, metalness: 0.25, roughness: 0.32 });
   const scrapMaterial = new THREE.MeshStandardMaterial({ color: 0x746a84, roughness: 0.86, metalness: 0.15 });
+  const platformMaterial = new THREE.MeshStandardMaterial({ color: 0x9f7dff, emissive: 0x4f2cff, emissiveIntensity: 0.22, roughness: 0.72 });
 
   const hatch = new THREE.Group();
   hatch.name = 'sneakleHatch';
@@ -115,6 +116,34 @@ function createUndergroundOverlay() {
   group.add(panel);
   group.add(makeSign('HATCH PANEL', THEFT_LEVEL.hatchPanelX, 2.35, 2.0));
 
+  const scrapSteps = [];
+  const platformXs = THEFT_LEVEL.wobbleCoilPlatformXs ?? [19.4, 18.0, 16.6, 15.6];
+  platformXs.forEach((x, index) => {
+    const y = 0.72 + index * 0.42;
+    const platform = new THREE.Mesh(
+      new THREE.BoxGeometry(index === platformXs.length - 1 ? 1.45 : 1.1, 0.18, 0.68),
+      index % 2 === 0 ? platformMaterial : scrapMaterial
+    );
+    platform.name = `sneakleScrapStep${index + 1}`;
+    platform.position.set(x, y, 0.24);
+    platform.rotation.z = index % 2 === 0 ? -0.08 : 0.08;
+    platform.visible = false;
+    scrapSteps.push(platform);
+    group.add(platform);
+  });
+
+  const coilShelf = new THREE.Mesh(new THREE.BoxGeometry(1.65, 0.22, 0.78), platformMaterial);
+  coilShelf.name = 'sneakleWobbleCoilShelf';
+  coilShelf.position.set(THEFT_LEVEL.wobbleCoilX ?? 15.6, (THEFT_LEVEL.wobbleCoilY ?? 2.25) - 0.25, 0.22);
+  coilShelf.rotation.z = -0.05;
+  coilShelf.visible = false;
+  group.add(coilShelf);
+
+  const climbSign = makeSign('SCRAP HOP', 17.5, 2.75, 1.75);
+  climbSign.name = 'sneakleScrapHopSign';
+  climbSign.visible = false;
+  group.add(climbSign);
+
   const coilPickup = new THREE.Group();
   coilPickup.name = 'sneakleWobbleCoilPickup';
   coilPickup.visible = false;
@@ -131,10 +160,10 @@ function createUndergroundOverlay() {
   const coilCore = new THREE.Mesh(new THREE.SphereGeometry(0.1, 12, 8), panelMaterial);
   coilCore.position.set(0, 0.45, 0.14);
   coilPickup.add(scrapA, scrapB, coil, coilCore);
-  coilPickup.position.set(THEFT_LEVEL.wobbleCoilX ?? 16.4, THEFT_LEVEL.wobbleCoilY ?? 0.42, 0.34);
+  coilPickup.position.set(THEFT_LEVEL.wobbleCoilX ?? 15.6, THEFT_LEVEL.wobbleCoilY ?? 2.25, 0.34);
   group.add(coilPickup);
 
-  const coilSign = makeSign('WOBBLE COIL', THEFT_LEVEL.wobbleCoilX ?? 16.4, 1.65, 1.95);
+  const coilSign = makeSign('WOBBLE COIL', THEFT_LEVEL.wobbleCoilX ?? 15.6, (THEFT_LEVEL.wobbleCoilY ?? 2.25) + 1.0, 1.95);
   coilSign.name = 'sneakleWobbleCoilSign';
   coilSign.visible = false;
   group.add(coilSign);
@@ -154,6 +183,9 @@ function createUndergroundOverlay() {
   group.userData.hatch = hatch;
   group.userData.panel = panel;
   group.userData.panelHomeY = THEFT_LEVEL.hatchPanelY ?? 1.45;
+  group.userData.scrapSteps = scrapSteps;
+  group.userData.coilShelf = coilShelf;
+  group.userData.climbSign = climbSign;
   group.userData.coilPickup = coilPickup;
   group.userData.coil = coil;
   group.userData.coilHomeY = coil.position.y;
@@ -186,14 +218,14 @@ function extendSneakleCamera(camera, run) {
   const playerX = Number.isFinite(run.player?.x) ? run.player.x : 0;
   const maxFollowX = Math.max(19, run.level.maxX - 2.2);
   const desiredX = theftSurfaceGroup.position.x + THREE.MathUtils.clamp(playerX, 2, maxFollowX);
-  const desiredY = 1.95;
+  const desiredY = run?.ufoHatchInspected && !run?.wobbleCoilCollected ? 2.35 : 1.95;
 
-  // This remains conservative because RKT-70 keeps the first part inside the
-  // proven camera-safe hatch area instead of extending traversal offscreen.
+  // This remains conservative because RKT-72 keeps the first repair loop inside
+  // the proven camera-safe Sneakle range while still requiring a vertical search.
   camera.position.x = desiredX;
   camera.position.y = THREE.MathUtils.lerp(camera.position.y, desiredY, 0.2);
   camera.position.z = THREE.MathUtils.lerp(camera.position.z, 10, 0.2);
-  camera.lookAt(camera.position.x, 1.2, 0);
+  camera.lookAt(camera.position.x, desiredY - 0.75, 0);
 }
 
 function renderUndergroundOverlay(camera, now = performance.now()) {
@@ -214,6 +246,9 @@ function renderUndergroundOverlay(camera, now = performance.now()) {
     panel.position.y = overlay.userData.panelHomeY + Math.sin(now * 0.006) * 0.08;
   }
 
+  const scrapSteps = overlay.userData.scrapSteps ?? [];
+  const coilShelf = overlay.userData.coilShelf;
+  const climbSign = overlay.userData.climbSign;
   const coilPickup = overlay.userData.coilPickup;
   const coil = overlay.userData.coil;
   const coilSign = overlay.userData.coilSign;
@@ -223,6 +258,9 @@ function renderUndergroundOverlay(camera, now = performance.now()) {
   const returnVisible = show && run?.wobbleCoilCollected && !run?.wobbleCoilInstalled;
   const installedVisible = show && Boolean(run?.wobbleCoilInstalled);
 
+  scrapSteps.forEach((platform) => { platform.visible = pickupVisible; });
+  if (coilShelf) coilShelf.visible = pickupVisible;
+  if (climbSign) climbSign.visible = pickupVisible;
   if (coilPickup) coilPickup.visible = pickupVisible;
   if (coilSign) coilSign.visible = pickupVisible;
   if (returnSign) returnSign.visible = returnVisible;
