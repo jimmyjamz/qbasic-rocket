@@ -81,6 +81,9 @@ test('hatch diagnostic panel stays near the visible hatch area but is raised for
   assert.ok(THEFT_LEVEL.ufoBodyLeft < THEFT_LEVEL.ufoX);
   assert.ok(THEFT_LEVEL.ufoBodyRight > THEFT_LEVEL.ufoX);
   assert.ok(THEFT_LEVEL.ufoBodyHeight > 0.9);
+  assert.ok(THEFT_LEVEL.wobbleCoilX < THEFT_LEVEL.ufoApproachX - 10);
+  assert.ok(THEFT_LEVEL.wobbleCoilX > THEFT_LEVEL.minX);
+  assert.ok(THEFT_LEVEL.wobbleCoilPlatformXs.length >= 6);
 });
 
 test('nearby hatch-area diagnostic panel requires a small jetpack hop to inspect', () => {
@@ -117,6 +120,100 @@ test('nearby hatch-area diagnostic panel requires a small jetpack hop to inspect
   assert.equal(run.ufoHatchInspected, true);
   assert.equal(run.objective, 'FIND MISSING PART');
   assert.equal(run.state, 'stranded');
+});
+
+test('Sneakle Wobble Coil requires landing on the far elevated shelf before hatch install', () => {
+  const run = createSurfaceRun(THEFT_LEVEL);
+  run.startTheft();
+  run.update(THEFT_SEQUENCE_SECONDS, { x: 1, y: 0 });
+  run.update(0.16, { x: THEFT_LEVEL.ufoApproachX + 0.05, y: 0 });
+  assert.equal(run.ufoDiscovered, true);
+  assert.equal(run.objective, 'INSPECT UFO HATCH');
+
+  run.update(0.16, { x: THEFT_LEVEL.wobbleCoilX, y: THEFT_LEVEL.wobbleCoilY });
+  assert.equal(run.wobbleCoilCollected, false);
+  assert.equal(run.objective, 'INSPECT UFO HATCH');
+
+  run.update(0.16, { x: THEFT_LEVEL.hatchPanelX + THEFT_LEVEL.hatchPanelRadiusX - 0.08, y: THEFT_LEVEL.ufoBodyHeight + 0.1 });
+  assert.equal(run.ufoHatchInspected, true);
+  assert.equal(run.objective, 'FIND MISSING PART');
+
+  run.update(0.16, { x: THEFT_LEVEL.wobbleCoilX, y: 0 });
+  assert.equal(run.wobbleCoilCollected, false);
+  assert.equal(run.objective, 'FIND MISSING PART');
+
+  const passNearCoilWithoutLanding = {
+    x: THEFT_LEVEL.wobbleCoilX,
+    y: THEFT_LEVEL.wobbleCoilY,
+    landedOnRepairPlatform: false,
+    repairPlatformIndex: null
+  };
+  run.update(0.16, passNearCoilWithoutLanding);
+  assert.equal(run.wobbleCoilCollected, false);
+  assert.equal(run.objective, 'FIND MISSING PART');
+
+  const platformIndex = THEFT_LEVEL.wobbleCoilPlatformXs.length - 1;
+  const shelfLanding = resolveSurfaceMovement(
+    { x: THEFT_LEVEL.wobbleCoilX, y: THEFT_LEVEL.wobbleCoilY + 0.5 },
+    { x: THEFT_LEVEL.wobbleCoilX, y: THEFT_LEVEL.wobbleCoilY - 0.2 },
+    THEFT_LEVEL,
+    false
+  );
+  assert.equal(shelfLanding.landedOnRepairPlatform, true);
+  assert.equal(shelfLanding.repairPlatformIndex, platformIndex);
+
+  run.update(0.16, shelfLanding);
+  assert.equal(run.wobbleCoilCollected, true);
+  assert.equal(run.wobbleCoilInstalled, false);
+  assert.equal(run.objective, 'RETURN TO UFO');
+
+  run.update(0.16, { x: THEFT_LEVEL.hatchX + 0.1, y: 0 });
+  assert.equal(run.wobbleCoilInstalled, true);
+  assert.equal(run.objective, 'WOBBLE COIL INSTALLED');
+  assert.equal(run.state, 'stranded');
+});
+
+test('Sneakle scrap steps catch descending astronaut as solid platforms', () => {
+  const platformIndex = THEFT_LEVEL.wobbleCoilPlatformXs.length - 1;
+  const platformX = THEFT_LEVEL.wobbleCoilPlatformXs[platformIndex];
+  const platformY = THEFT_LEVEL.wobbleCoilPlatformStartY + platformIndex * THEFT_LEVEL.wobbleCoilPlatformStepY;
+
+  const landing = resolveSurfaceMovement(
+    { x: platformX, y: platformY + 0.5 },
+    { x: platformX, y: platformY - 0.2 },
+    THEFT_LEVEL,
+    false
+  );
+  assert.ok(Math.abs(landing.y - platformY) < 0.0001);
+  assert.equal(landing.blockedY, true);
+  assert.equal(landing.landedOnRepairPlatform, true);
+  assert.equal(landing.repairPlatformIndex, platformIndex);
+
+  const miss = resolveSurfaceMovement(
+    { x: platformX + 2.4, y: platformY + 0.5 },
+    { x: platformX + 2.4, y: platformY - 0.2 },
+    THEFT_LEVEL,
+    false
+  );
+  assert.ok(miss.y < platformY);
+});
+
+test('Sneakle scrap steps block bottom-up jetpack movement through the underside', () => {
+  const platformIndex = THEFT_LEVEL.wobbleCoilPlatformXs.length - 1;
+  const platformX = THEFT_LEVEL.wobbleCoilPlatformXs[platformIndex];
+  const platformY = THEFT_LEVEL.wobbleCoilPlatformStartY + platformIndex * THEFT_LEVEL.wobbleCoilPlatformStepY;
+  const undersideY = platformY - THEFT_LEVEL.wobbleCoilPlatformThickness;
+
+  const undersideBlock = resolveSurfaceMovement(
+    { x: platformX, y: undersideY - 0.35 },
+    { x: platformX, y: platformY + 0.2 },
+    THEFT_LEVEL,
+    false
+  );
+  assert.ok(Math.abs(undersideBlock.y - undersideY) < 0.0001);
+  assert.equal(undersideBlock.blockedY, true);
+  assert.equal(undersideBlock.landedOnRepairPlatform, false);
+  assert.equal(undersideBlock.repairPlatformIndex, null);
 });
 
 test('theft level preserves side-scroller movement bounds', () => {

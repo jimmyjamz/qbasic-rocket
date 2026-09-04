@@ -58,6 +58,9 @@ function createUndergroundOverlay() {
   const wallMaterial = new THREE.MeshStandardMaterial({ color: 0x3a2460, roughness: 0.78 });
   const glowMaterial = new THREE.MeshStandardMaterial({ color: 0xffdd66, emissive: 0xffdd66, emissiveIntensity: 0.45 });
   const panelMaterial = new THREE.MeshStandardMaterial({ color: 0x7df5ff, emissive: 0x38c8ff, emissiveIntensity: 0.6, metalness: 0.2, roughness: 0.25 });
+  const coilMaterial = new THREE.MeshStandardMaterial({ color: 0xff8a2a, emissive: 0xff5c22, emissiveIntensity: 0.8, metalness: 0.25, roughness: 0.32 });
+  const scrapMaterial = new THREE.MeshStandardMaterial({ color: 0x746a84, roughness: 0.86, metalness: 0.15 });
+  const platformMaterial = new THREE.MeshStandardMaterial({ color: 0x9f7dff, emissive: 0x4f2cff, emissiveIntensity: 0.22, roughness: 0.72 });
 
   const hatch = new THREE.Group();
   hatch.name = 'sneakleHatch';
@@ -113,9 +116,100 @@ function createUndergroundOverlay() {
   group.add(panel);
   group.add(makeSign('HATCH PANEL', THEFT_LEVEL.hatchPanelX, 2.35, 2.0));
 
+  const searchSign = makeSign('WOBBLE COIL ←', THEFT_LEVEL.hatchX - 1.1, 2.65, 2.35);
+  searchSign.name = 'sneakleWobbleCoilSearchSign';
+  searchSign.visible = false;
+  group.add(searchSign);
+
+  const scrapSteps = [];
+  const platformXs = THEFT_LEVEL.wobbleCoilPlatformXs ?? [21.0, 20.0, 19.2, 18.4];
+  platformXs.forEach((x, index) => {
+    const y = 0.78 + index * 0.34;
+    const platform = new THREE.Mesh(
+      new THREE.BoxGeometry(index === platformXs.length - 1 ? 1.65 : 1.16, 0.18, 0.68),
+      index % 2 === 0 ? platformMaterial : scrapMaterial
+    );
+    platform.name = `sneakleScrapStep${index + 1}`;
+    platform.position.set(x, y, 0.24);
+    platform.rotation.z = index % 2 === 0 ? -0.08 : 0.08;
+    platform.visible = false;
+    scrapSteps.push(platform);
+    group.add(platform);
+
+    const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.11, 12, 8), glowMaterial);
+    lamp.name = `sneakleScrapStepLamp${index + 1}`;
+    lamp.position.set(x, y + 0.34, 0.42);
+    lamp.visible = false;
+    scrapSteps.push(lamp);
+    group.add(lamp);
+  });
+
+  const coilShelf = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.22, 0.78), platformMaterial);
+  coilShelf.name = 'sneakleWobbleCoilShelf';
+  coilShelf.position.set(THEFT_LEVEL.wobbleCoilX ?? 18.4, (THEFT_LEVEL.wobbleCoilY ?? 2.05) - 0.25, 0.22);
+  coilShelf.rotation.z = -0.05;
+  coilShelf.visible = false;
+  group.add(coilShelf);
+
+  const climbSign = makeSign('SCRAP HOP', 19.35, 2.72, 1.75);
+  climbSign.name = 'sneakleScrapHopSign';
+  climbSign.visible = false;
+  group.add(climbSign);
+
+  const coilPickup = new THREE.Group();
+  coilPickup.name = 'sneakleWobbleCoilPickup';
+  coilPickup.visible = false;
+  const scrapA = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.2, 0.48), scrapMaterial);
+  scrapA.rotation.z = 0.18;
+  scrapA.position.set(-0.18, 0.05, -0.04);
+  const scrapB = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.28, 0.4), scrapMaterial);
+  scrapB.rotation.z = -0.28;
+  scrapB.position.set(0.24, 0.08, 0.04);
+  const coil = new THREE.Mesh(new THREE.TorusGeometry(0.36, 0.075, 10, 32), coilMaterial);
+  coil.name = 'sneakleWobbleCoil';
+  coil.rotation.x = Math.PI / 2;
+  coil.position.set(0, 0.48, 0.14);
+  const coilCore = new THREE.Mesh(new THREE.SphereGeometry(0.15, 12, 8), panelMaterial);
+  coilCore.position.set(0, 0.48, 0.14);
+  const coilBeacon = new THREE.Mesh(new THREE.SphereGeometry(0.16, 12, 8), glowMaterial);
+  coilBeacon.name = 'sneakleWobbleCoilBeacon';
+  coilBeacon.position.set(0, 0.95, 0.14);
+  coilPickup.add(scrapA, scrapB, coil, coilCore, coilBeacon);
+  coilPickup.position.set(THEFT_LEVEL.wobbleCoilX ?? 18.4, THEFT_LEVEL.wobbleCoilY ?? 2.05, 0.34);
+  group.add(coilPickup);
+
+  const coilSign = makeSign('WOBBLE COIL', THEFT_LEVEL.wobbleCoilX ?? 18.4, (THEFT_LEVEL.wobbleCoilY ?? 2.05) + 1.15, 2.05);
+  coilSign.name = 'sneakleWobbleCoilSign';
+  coilSign.visible = false;
+  group.add(coilSign);
+
+  const returnSign = makeSign('RETURN TO HATCH', THEFT_LEVEL.hatchX, 2.05, 2.15);
+  returnSign.name = 'sneakleReturnToHatchSign';
+  returnSign.visible = false;
+  group.add(returnSign);
+
+  const installedCoil = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.055, 10, 32), coilMaterial);
+  installedCoil.name = 'sneakleInstalledWobbleCoil';
+  installedCoil.rotation.x = Math.PI / 2;
+  installedCoil.position.set(THEFT_LEVEL.hatchX + 0.18, 0.68, 0.64);
+  installedCoil.visible = false;
+  group.add(installedCoil);
+
   group.userData.hatch = hatch;
   group.userData.panel = panel;
   group.userData.panelHomeY = THEFT_LEVEL.hatchPanelY ?? 1.45;
+  group.userData.searchSign = searchSign;
+  group.userData.scrapSteps = scrapSteps;
+  group.userData.coilShelf = coilShelf;
+  group.userData.climbSign = climbSign;
+  group.userData.coilPickup = coilPickup;
+  group.userData.coil = coil;
+  group.userData.coilBeacon = coilBeacon;
+  group.userData.coilHomeY = coil.position.y;
+  group.userData.coilBeaconHomeY = coilBeacon.position.y;
+  group.userData.coilSign = coilSign;
+  group.userData.returnSign = returnSign;
+  group.userData.installedCoil = installedCoil;
   return group;
 }
 
@@ -142,14 +236,14 @@ function extendSneakleCamera(camera, run) {
   const playerX = Number.isFinite(run.player?.x) ? run.player.x : 0;
   const maxFollowX = Math.max(19, run.level.maxX - 2.2);
   const desiredX = theftSurfaceGroup.position.x + THREE.MathUtils.clamp(playerX, 2, maxFollowX);
-  const desiredY = 1.95;
+  const desiredY = run?.ufoHatchInspected && !run?.wobbleCoilCollected ? 2.45 : 1.95;
 
-  // This remains conservative because RKT-70 keeps the first part inside the
-  // proven camera-safe hatch area instead of extending traversal offscreen.
+  // This remains conservative because RKT-72 keeps the first repair loop inside
+  // the proven camera-safe Sneakle range while still requiring a vertical search.
   camera.position.x = desiredX;
   camera.position.y = THREE.MathUtils.lerp(camera.position.y, desiredY, 0.2);
   camera.position.z = THREE.MathUtils.lerp(camera.position.z, 10, 0.2);
-  camera.lookAt(camera.position.x, 1.2, 0);
+  camera.lookAt(camera.position.x, desiredY - 0.75, 0);
 }
 
 function renderUndergroundOverlay(camera, now = performance.now()) {
@@ -168,5 +262,43 @@ function renderUndergroundOverlay(camera, now = performance.now()) {
   if (panel.visible) {
     panel.rotation.y += 0.08;
     panel.position.y = overlay.userData.panelHomeY + Math.sin(now * 0.006) * 0.08;
+  }
+
+  const searchSign = overlay.userData.searchSign;
+  const scrapSteps = overlay.userData.scrapSteps ?? [];
+  const coilShelf = overlay.userData.coilShelf;
+  const climbSign = overlay.userData.climbSign;
+  const coilPickup = overlay.userData.coilPickup;
+  const coil = overlay.userData.coil;
+  const coilBeacon = overlay.userData.coilBeacon;
+  const coilSign = overlay.userData.coilSign;
+  const returnSign = overlay.userData.returnSign;
+  const installedCoil = overlay.userData.installedCoil;
+  const pickupVisible = show && run?.ufoHatchInspected && !run?.wobbleCoilCollected;
+  const returnVisible = show && run?.wobbleCoilCollected && !run?.wobbleCoilInstalled;
+  const installedVisible = show && Boolean(run?.wobbleCoilInstalled);
+
+  if (searchSign) searchSign.visible = pickupVisible;
+  scrapSteps.forEach((platform) => { platform.visible = pickupVisible; });
+  if (coilShelf) coilShelf.visible = pickupVisible;
+  if (climbSign) climbSign.visible = pickupVisible;
+  if (coilPickup) coilPickup.visible = pickupVisible;
+  if (coilSign) coilSign.visible = pickupVisible;
+  if (returnSign) returnSign.visible = returnVisible;
+  if (installedCoil) installedCoil.visible = returnVisible || installedVisible;
+
+  if (pickupVisible && coil) {
+    coil.rotation.y += 0.1;
+    coil.position.y = overlay.userData.coilHomeY + Math.sin(now * 0.008) * 0.08;
+  }
+
+  if (pickupVisible && coilBeacon) {
+    coilBeacon.position.y = overlay.userData.coilBeaconHomeY + Math.sin(now * 0.014) * 0.14;
+    coilBeacon.scale.setScalar(1.2 + Math.sin(now * 0.01) * 0.18);
+  }
+
+  if ((returnVisible || installedVisible) && installedCoil) {
+    installedCoil.rotation.y += 0.08;
+    installedCoil.scale.setScalar(installedVisible ? 1 + Math.sin(now * 0.006) * 0.08 : 1);
   }
 }
