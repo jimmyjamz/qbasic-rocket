@@ -24,11 +24,14 @@ export const THEFT_LEVEL = Object.freeze({
   minX: -2, maxX: 27.5, targetX: 25, ufoX: 25, ufoApproachX: 21.7,
   hatchX: 22.2, hatchPanelX: 25.6, hatchPanelY: 1.45, hatchPanelMinY: 0.85,
   hatchPanelMaxY: 5.0, hatchPanelRadiusX: 1.05, missingPartLabel: 'WOBBLE COIL',
-  wobbleCoilX: 18.4, wobbleCoilY: 2.05, wobbleCoilMinY: 1.25,
-  wobbleCoilCollectRadius: 0.75, wobbleCoilPlatformXs: [21.0, 20.0, 19.2, 18.4], clueX: 10.5,
+  wobbleCoilX: 14.4, wobbleCoilY: 2.25, wobbleCoilMinY: 1.65,
+  wobbleCoilCollectRadius: 0.72,
+  wobbleCoilPlatformXs: [20.8, 19.2, 17.6, 16.0, 14.4],
+  wobbleCoilPlatformStartY: 0.72, wobbleCoilPlatformStepY: 0.36,
+  wobbleCoilPlatformWidth: 1.25, wobbleCoilShelfWidth: 1.8, clueX: 10.5,
   ufoBodyLeft: 23.45, ufoBodyRight: 26.35, ufoBodyHeight: 1.12,
   // RKT-70 uses a raised hatch diagnostic panel, not a repair part sitting on the UFO.
-  // RKT-72 keeps the Wobble Coil on a readable elevated scrap-hop route near the hatch path.
+  // RKT-72 places the Wobble Coil on an elevated scrap route so it is not a simple left/right pickup.
   // The crashed UFO blocks ground walking so the player cannot pass through the saucer.
   // The inspection zone remains forgiving so a kid-friendly hover near the panel works.
   // Extended underground traversal and hard blockers remain deferred.
@@ -55,6 +58,35 @@ function applyLowObstacleCollision(previous, proposedX, proposedY, left, right, 
     else x = previous.x <= left ? left : right;
   }
   return { x, y };
+}
+
+function getTheftRepairPlatforms(level) {
+  const platformXs = level.wobbleCoilPlatformXs ?? [];
+  const startY = level.wobbleCoilPlatformStartY ?? 0.72;
+  const stepY = level.wobbleCoilPlatformStepY ?? 0.36;
+  const width = level.wobbleCoilPlatformWidth ?? 1.25;
+  const shelfWidth = level.wobbleCoilShelfWidth ?? 1.8;
+  return platformXs.map((x, index) => ({
+    x,
+    y: startY + index * stepY,
+    width: index === platformXs.length - 1 ? shelfWidth : width
+  }));
+}
+
+function applyTheftRepairPlatformLanding(previous, proposedX, proposedY, level) {
+  if (level.kind !== 'theft' || !level.wobbleCoilPlatformXs?.length) {
+    return { x: proposedX, y: proposedY };
+  }
+
+  for (const platform of getTheftRepairPlatforms(level)) {
+    const left = platform.x - platform.width / 2 - level.radius;
+    const right = platform.x + platform.width / 2 + level.radius;
+    const insideX = proposedX >= left && proposedX <= right;
+    const crossedDown = previous.y >= platform.y && proposedY <= platform.y;
+    if (insideX && crossedDown) return { x: proposedX, y: platform.y };
+  }
+
+  return { x: proposedX, y: proposedY };
 }
 
 export function resolveSurfaceMovement(previous, proposed, level = SPROUT_LEVEL, ventSafe = false) {
@@ -88,6 +120,10 @@ export function resolveSurfaceMovement(previous, proposed, level = SPROUT_LEVEL,
     x = bodyResult.x;
     y = bodyResult.y;
   }
+
+  const platformResult = applyTheftRepairPlatformLanding(previous, x, y, level);
+  x = platformResult.x;
+  y = platformResult.y;
 
   return { x, y, blockedX: x !== proposed.x, blockedY: y !== proposed.y };
 }
@@ -155,7 +191,7 @@ export function createSurfaceRun(level = SPROUT_LEVEL) {
       const radius = level.wobbleCoilCollectRadius ?? 0.75;
       const minY = level.wobbleCoilMinY ?? partY - 0.6;
       return Math.abs(run.player.x - partX) < radius &&
-        Math.abs(run.player.y - partY) < 0.85 &&
+        Math.abs(run.player.y - partY) < 0.75 &&
         run.player.y >= minY;
     },
     get canInstallWobbleCoil() {
