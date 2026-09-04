@@ -24,10 +24,11 @@ export const THEFT_LEVEL = Object.freeze({
   minX: -2, maxX: 27.5, targetX: 25, ufoX: 25, ufoApproachX: 21.7,
   hatchX: 22.2, hatchPanelX: 25.6, hatchPanelY: 1.45, hatchPanelMinY: 0.85,
   hatchPanelMaxY: 5.0, hatchPanelRadiusX: 1.05, missingPartLabel: 'WOBBLE COIL',
-  wobbleCoilX: 16.4, wobbleCoilY: 0.42, wobbleCoilCollectRadius: 0.75, clueX: 10.5,
+  wobbleCoilX: 15.6, wobbleCoilY: 2.25, wobbleCoilMinY: 1.65,
+  wobbleCoilCollectRadius: 0.58, wobbleCoilPlatformXs: [19.4, 18.0, 16.6, 15.6], clueX: 10.5,
   ufoBodyLeft: 23.45, ufoBodyRight: 26.35, ufoBodyHeight: 1.12,
   // RKT-70 uses a raised hatch diagnostic panel, not a repair part sitting on the UFO.
-  // RKT-72 places the Wobble Coil away from the UFO so the player must search and return.
+  // RKT-72 places the Wobble Coil on an elevated scrap route so it is not a simple left/right pickup.
   // The crashed UFO blocks ground walking so the player cannot pass through the saucer.
   // The inspection zone remains forgiving so a kid-friendly hover near the panel works.
   // Extended underground traversal and hard blockers remain deferred.
@@ -152,7 +153,10 @@ export function createSurfaceRun(level = SPROUT_LEVEL) {
       const partX = level.wobbleCoilX ?? level.clueX ?? 12;
       const partY = level.wobbleCoilY ?? 0;
       const radius = level.wobbleCoilCollectRadius ?? 0.75;
-      return Math.abs(run.player.x - partX) < radius && Math.abs(run.player.y - partY) < 0.9;
+      const minY = level.wobbleCoilMinY ?? partY - 0.6;
+      return Math.abs(run.player.x - partX) < radius &&
+        Math.abs(run.player.y - partY) < 0.75 &&
+        run.player.y >= minY;
     },
     get canInstallWobbleCoil() {
       if (level.kind !== 'theft' || run.state !== 'stranded' || !wobbleCoilCollected || wobbleCoilInstalled) return false;
