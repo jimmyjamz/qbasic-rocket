@@ -122,8 +122,12 @@ test('nearby hatch-area diagnostic panel requires a small jetpack hop to inspect
   assert.equal(run.state, 'stranded');
 });
 
-test('Sneakle Wobble Coil requires an elevated scrap-route pickup before hatch install', () => {
+test('Sneakle Wobble Coil requires landing on the top scrap shelf before hatch install', () => {
   const run = createSurfaceRun(THEFT_LEVEL);
+  const platformIndex = THEFT_LEVEL.wobbleCoilPlatformXs.length - 1;
+  const platformX = THEFT_LEVEL.wobbleCoilPlatformXs[platformIndex];
+  const platformY = THEFT_LEVEL.wobbleCoilPlatformStartY + platformIndex * THEFT_LEVEL.wobbleCoilPlatformStepY;
+
   run.startTheft();
   run.update(THEFT_SEQUENCE_SECONDS, { x: 1, y: 0 });
   run.update(0.16, { x: THEFT_LEVEL.ufoApproachX + 0.05, y: 0 });
@@ -142,7 +146,26 @@ test('Sneakle Wobble Coil requires an elevated scrap-route pickup before hatch i
   assert.equal(run.wobbleCoilCollected, false);
   assert.equal(run.objective, 'FIND MISSING PART');
 
-  run.update(0.16, { x: THEFT_LEVEL.wobbleCoilX, y: THEFT_LEVEL.wobbleCoilY });
+  const bottomUpFlyThrough = resolveSurfaceMovement(
+    { x: platformX, y: platformY - 0.35 },
+    { x: platformX, y: THEFT_LEVEL.wobbleCoilY },
+    THEFT_LEVEL,
+    false
+  );
+  assert.equal(bottomUpFlyThrough.landedOnRepairPlatform, false);
+  run.update(0.16, bottomUpFlyThrough);
+  assert.equal(run.wobbleCoilCollected, false);
+  assert.equal(run.objective, 'FIND MISSING PART');
+
+  const shelfLanding = resolveSurfaceMovement(
+    { x: platformX, y: platformY + 0.45 },
+    { x: platformX, y: platformY - 0.15 },
+    THEFT_LEVEL,
+    false
+  );
+  assert.equal(shelfLanding.landedOnRepairPlatform, true);
+  assert.equal(shelfLanding.repairPlatformIndex, platformIndex);
+  run.update(0.16, shelfLanding);
   assert.equal(run.wobbleCoilCollected, true);
   assert.equal(run.wobbleCoilInstalled, false);
   assert.equal(run.objective, 'RETURN TO UFO');
@@ -166,6 +189,18 @@ test('Sneakle scrap steps catch descending astronaut as one-way platforms', () =
   );
   assert.ok(Math.abs(landing.y - platformY) < 0.0001);
   assert.equal(landing.blockedY, true);
+  assert.equal(landing.landedOnRepairPlatform, true);
+  assert.equal(landing.repairPlatformIndex, platformIndex);
+
+  const upwardPass = resolveSurfaceMovement(
+    { x: platformX, y: platformY - 0.2 },
+    { x: platformX, y: platformY + 0.45 },
+    THEFT_LEVEL,
+    false
+  );
+  assert.equal(upwardPass.blockedY, false);
+  assert.equal(upwardPass.landedOnRepairPlatform, false);
+  assert.equal(upwardPass.repairPlatformIndex, null);
 
   const miss = resolveSurfaceMovement(
     { x: platformX + 2.4, y: platformY + 0.5 },
