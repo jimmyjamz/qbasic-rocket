@@ -1,5 +1,6 @@
 import './rocketMonkeyWorldGag.js';
 import './sneakleUndergroundPresentation.js';
+import './sneakleCheetosTradePresentation.js';
 import './devTestStart.js';
 import './planetExplorer.js';
 import './countdownPresentation.js';
