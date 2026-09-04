@@ -289,6 +289,7 @@ export function createSurfaceAdventureView(createAstronaut, level = SPROUT_LEVEL
     beacon.renderOrder = 25;
     coilGroup.add(coil, core, beacon);
     trail.add(coilGroup);
+    trail.userData.coilPickup = coilGroup;
     trail.userData.coil = coil;
     trail.userData.beacon = beacon;
     trail.userData.beaconHomeY = beacon.position.y;
@@ -457,11 +458,13 @@ export function createSurfaceAdventureView(createAstronaut, level = SPROUT_LEVEL
             }
           });
         });
-        const coilRouteVisible = run.state === 'stranded' && run.ufoHatchInspected && !run.wobbleCoilCollected;
-        if (wobbleCoilTrail) wobbleCoilTrail.visible = coilRouteVisible;
-        if (wobbleTrailSign) wobbleTrailSign.visible = coilRouteVisible;
-        if (wobbleCoilSign) wobbleCoilSign.visible = coilRouteVisible;
-        if (coilRouteVisible && wobbleCoilTrail?.userData?.coil) {
+        const platformsVisible = run.state === 'stranded' && run.ufoHatchInspected;
+        const coilPickupVisible = platformsVisible && !run.wobbleCoilCollected;
+        if (wobbleCoilTrail) wobbleCoilTrail.visible = platformsVisible;
+        if (wobbleCoilTrail?.userData?.coilPickup) wobbleCoilTrail.userData.coilPickup.visible = coilPickupVisible;
+        if (wobbleTrailSign) wobbleTrailSign.visible = coilPickupVisible;
+        if (wobbleCoilSign) wobbleCoilSign.visible = coilPickupVisible;
+        if (coilPickupVisible && wobbleCoilTrail?.userData?.coil) {
           wobbleCoilTrail.userData.coil.rotation.y += 0.12;
           wobbleCoilTrail.userData.beacon.position.y = wobbleCoilTrail.userData.beaconHomeY + Math.sin(time * 8) * 0.12;
           wobbleCoilTrail.userData.beacon.scale.setScalar(1.35 + Math.sin(time * 7) * 0.18);
