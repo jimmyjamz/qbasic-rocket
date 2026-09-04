@@ -69,13 +69,14 @@ function getTheftRepairPlatforms(level) {
   return platformXs.map((x, index) => ({
     x,
     y: startY + index * stepY,
-    width: index === platformXs.length - 1 ? shelfWidth : width
+    width: index === platformXs.length - 1 ? shelfWidth : width,
+    index
   }));
 }
 
 function applyTheftRepairPlatformLanding(previous, proposedX, proposedY, level) {
   if (level.kind !== 'theft' || !level.wobbleCoilPlatformXs?.length) {
-    return { x: proposedX, y: proposedY };
+    return { x: proposedX, y: proposedY, landedOnRepairPlatform: false, repairPlatformIndex: null };
   }
 
   for (const platform of getTheftRepairPlatforms(level)) {
@@ -83,10 +84,12 @@ function applyTheftRepairPlatformLanding(previous, proposedX, proposedY, level) 
     const right = platform.x + platform.width / 2 + level.radius;
     const insideX = proposedX >= left && proposedX <= right;
     const crossedDown = previous.y >= platform.y && proposedY <= platform.y;
-    if (insideX && crossedDown) return { x: proposedX, y: platform.y };
+    if (insideX && crossedDown) {
+      return { x: proposedX, y: platform.y, landedOnRepairPlatform: true, repairPlatformIndex: platform.index };
+    }
   }
 
-  return { x: proposedX, y: proposedY };
+  return { x: proposedX, y: proposedY, landedOnRepairPlatform: false, repairPlatformIndex: null };
 }
 
 export function resolveSurfaceMovement(previous, proposed, level = SPROUT_LEVEL, ventSafe = false) {
@@ -125,7 +128,14 @@ export function resolveSurfaceMovement(previous, proposed, level = SPROUT_LEVEL,
   x = platformResult.x;
   y = platformResult.y;
 
-  return { x, y, blockedX: x !== proposed.x, blockedY: y !== proposed.y };
+  return {
+    x,
+    y,
+    blockedX: x !== proposed.x,
+    blockedY: y !== proposed.y,
+    landedOnRepairPlatform: platformResult.landedOnRepairPlatform,
+    repairPlatformIndex: platformResult.repairPlatformIndex
+  };
 }
 
 export function createSurfaceRun(level = SPROUT_LEVEL) {
@@ -190,7 +200,11 @@ export function createSurfaceRun(level = SPROUT_LEVEL) {
       const partY = level.wobbleCoilY ?? 0;
       const radius = level.wobbleCoilCollectRadius ?? 0.75;
       const minY = level.wobbleCoilMinY ?? partY - 0.6;
-      return Math.abs(run.player.x - partX) < radius &&
+      const requiredPlatformIndex = (level.wobbleCoilPlatformXs?.length ?? 1) - 1;
+      const standingOnCoilShelf = run.player.landedOnRepairPlatform === true &&
+        run.player.repairPlatformIndex === requiredPlatformIndex;
+      return standingOnCoilShelf &&
+        Math.abs(run.player.x - partX) < radius &&
         Math.abs(run.player.y - partY) < 0.75 &&
         run.player.y >= minY;
     },
@@ -251,7 +265,7 @@ export function createSurfaceRun(level = SPROUT_LEVEL) {
     },
     update(dt, player) {
       clock += dt;
-      run.player = { x: player.x, y: player.y };
+      run.player = { x: player.x, y: player.y, landedOnRepairPlatform: player.landedOnRepairPlatform, repairPlatformIndex: player.repairPlatformIndex };
       if (level.kind === 'theft') {
         if (run.state === 'stealing') {
           theftClock = Math.min(THEFT_SEQUENCE_SECONDS, theftClock + dt);
