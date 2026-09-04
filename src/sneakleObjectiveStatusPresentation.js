@@ -30,10 +30,10 @@ function getSneakleMission(run) {
   if (run.ufoHatchInspected) {
     return {
       title: 'Find the Wobble Coil',
-      objective: 'The hatch panel says the UFO is missing a Wobble Coil. Search Sneakle for it.',
+      objective: 'The hatch panel says the UFO is missing a Wobble Coil. Search the elevated scrap route on Sneakle.',
       badge: 'Missing part',
       action: 'Find coil',
-      help: 'Diagnostic complete. Search away from the UFO for the Wobble Coil.'
+      help: 'Diagnostic complete. Move left and use the jetpack to climb the scrap platforms for the Wobble Coil.'
     };
   }
 
