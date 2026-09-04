@@ -7,7 +7,8 @@ RKT-72 adds the next focused repair beat after the Sneakle hatch diagnostic.
 ```text
 INSPECT UFO HATCH
 → FIND MISSING PART
-→ collect Wobble Coil away from UFO
+→ climb elevated scrap route
+→ collect Wobble Coil
 → RETURN TO UFO
 → WOBBLE COIL INSTALLED
 ```
@@ -15,6 +16,8 @@ INSPECT UFO HATCH
 ## Scope
 
 - Adds a visible Wobble Coil pickup away from the broken UFO.
+- Places the Wobble Coil on an elevated scrap route so it is not collected by ordinary left/right ground walking.
+- Requires jetpack movement to reach the Wobble Coil.
 - The Wobble Coil cannot be collected before the hatch diagnostic identifies the missing part.
 - Collecting the Wobble Coil changes the objective to `RETURN TO UFO`.
 - Returning to the hatch area installs the Wobble Coil.
@@ -33,11 +36,13 @@ http://localhost:5173/?testPlanet=sneakle&testStage=hatch
 1. Open the hatch shortcut.
 2. Jetpack to the blinking hatch panel.
 3. Confirm objective becomes `FIND MISSING PART`.
-4. Move left away from the UFO and find the Wobble Coil.
-5. Collect the Wobble Coil.
-6. Confirm objective becomes `RETURN TO UFO`.
-7. Return to the hatch beside the UFO.
-8. Confirm objective becomes `WOBBLE COIL INSTALLED`.
+4. Move left away from the UFO.
+5. Find the elevated scrap-hop route and Wobble Coil.
+6. Confirm walking under the Wobble Coil does not collect it.
+7. Use the jetpack to reach the elevated Wobble Coil.
+8. Confirm objective becomes `RETURN TO UFO`.
+9. Return to the hatch beside the UFO.
+10. Confirm objective becomes `WOBBLE COIL INSTALLED`.
 
 ## Guardrails
 
