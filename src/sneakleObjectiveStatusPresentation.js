@@ -7,13 +7,33 @@ const loopStatusLabel = document.querySelector('#loopStatus');
 const helpLabel = document.querySelector('#helpText');
 
 function getSneakleMission(run) {
+  if (run.wobbleCoilInstalled) {
+    return {
+      title: 'Wobble Coil installed',
+      objective: 'The Wobble Coil is hooked into the UFO. More repair weirdness is still pending.',
+      badge: 'Installed',
+      action: 'Repair pending',
+      help: 'Wobble Coil installed. The UFO still needs more help before it can fly.'
+    };
+  }
+
+  if (run.wobbleCoilCollected) {
+    return {
+      title: 'Return to the UFO',
+      objective: 'You found the Wobble Coil. Bring it back to the hatch and snap it into place.',
+      badge: 'Coil found',
+      action: 'Install coil',
+      help: 'Wobble Coil found. Head back to the hatch beside the broken UFO.'
+    };
+  }
+
   if (run.ufoHatchInspected) {
     return {
-      title: 'Missing part identified',
-      objective: 'The hatch panel says the UFO is missing a Wobble Coil. Search Sneakle for it next.',
+      title: 'Find the Wobble Coil',
+      objective: 'The hatch panel says the UFO is missing a Wobble Coil. Search Sneakle for it.',
       badge: 'Missing part',
-      action: 'Find missing part',
-      help: 'Diagnostic complete. The UFO needs a Wobble Coil from somewhere else on Sneakle.'
+      action: 'Find coil',
+      help: 'Diagnostic complete. Search away from the UFO for the Wobble Coil.'
     };
   }
 
