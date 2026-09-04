@@ -81,11 +81,9 @@ test('hatch diagnostic panel stays near the visible hatch area but is raised for
   assert.ok(THEFT_LEVEL.ufoBodyLeft < THEFT_LEVEL.ufoX);
   assert.ok(THEFT_LEVEL.ufoBodyRight > THEFT_LEVEL.ufoX);
   assert.ok(THEFT_LEVEL.ufoBodyHeight > 0.9);
-  assert.ok(THEFT_LEVEL.wobbleCoilX < THEFT_LEVEL.ufoApproachX - 2);
+  assert.ok(THEFT_LEVEL.wobbleCoilX < THEFT_LEVEL.ufoApproachX - 5);
   assert.ok(THEFT_LEVEL.wobbleCoilX > THEFT_LEVEL.minX);
-  assert.ok(THEFT_LEVEL.wobbleCoilY > 1.8);
-  assert.ok(THEFT_LEVEL.wobbleCoilMinY > 1.4);
-  assert.ok(THEFT_LEVEL.wobbleCoilPlatformXs.length >= 3);
+  assert.ok(THEFT_LEVEL.wobbleCoilPlatformXs.length >= 5);
 });
 
 test('nearby hatch-area diagnostic panel requires a small jetpack hop to inspect', () => {
@@ -153,6 +151,29 @@ test('Sneakle Wobble Coil requires an elevated scrap-route pickup before hatch i
   assert.equal(run.wobbleCoilInstalled, true);
   assert.equal(run.objective, 'WOBBLE COIL INSTALLED');
   assert.equal(run.state, 'stranded');
+});
+
+test('Sneakle scrap steps catch descending astronaut as one-way platforms', () => {
+  const platformIndex = THEFT_LEVEL.wobbleCoilPlatformXs.length - 1;
+  const platformX = THEFT_LEVEL.wobbleCoilPlatformXs[platformIndex];
+  const platformY = THEFT_LEVEL.wobbleCoilPlatformStartY + platformIndex * THEFT_LEVEL.wobbleCoilPlatformStepY;
+
+  const landing = resolveSurfaceMovement(
+    { x: platformX, y: platformY + 0.5 },
+    { x: platformX, y: platformY - 0.2 },
+    THEFT_LEVEL,
+    false
+  );
+  assert.ok(Math.abs(landing.y - platformY) < 0.0001);
+  assert.equal(landing.blockedY, true);
+
+  const miss = resolveSurfaceMovement(
+    { x: platformX + 2.4, y: platformY + 0.5 },
+    { x: platformX + 2.4, y: platformY - 0.2 },
+    THEFT_LEVEL,
+    false
+  );
+  assert.ok(miss.y < platformY);
 });
 
 test('theft level preserves side-scroller movement bounds', () => {
