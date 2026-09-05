@@ -31,7 +31,7 @@ export const THEFT_LEVEL = Object.freeze({
   wobbleCoilPlatformWidth: 1.25, wobbleCoilShelfWidth: 1.9,
   wobbleCoilPlatformThickness: 0.24,
   backpackX: 4.4, backpackY: 0, backpackRadius: 0.9, cheetosLabel: 'CHEETOS',
-  tradeAlienX: 18.9, tradeAlienY: 0, tradeAlienRadius: 1.15,
+  tradeAlienX: 20.6, tradeAlienY: 0, tradeAlienRadius: 1.15,
   slimeLabel: 'ICKY STICKY SLIME', fluxCapacitorLabel: 'FLUX CAPACITOR', clueX: 10.5,
   ufoBodyLeft: 23.45, ufoBodyRight: 26.35, ufoBodyHeight: 1.12,
   // RKT-70 uses a raised hatch diagnostic panel, not a repair part sitting on the UFO.
@@ -235,6 +235,7 @@ export function createSurfaceRun(level = SPROUT_LEVEL) {
     },
     get vent() { return steamPhase(ventClock); },
     get contactStage() { return contactStage; },
+    get theftElapsedSeconds() { return theftClock; },
     get theftProgress() { return theftProgress; },
     get theftBoardingProgress() { return theftBoardingProgress; },
     get ufoDiscovered() { return ufoDiscovered; },
