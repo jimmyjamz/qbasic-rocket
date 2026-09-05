@@ -169,7 +169,7 @@ test('Sneakle Wobble Coil requires landing on the far elevated shelf before hatc
 
   run.update(0.16, { x: THEFT_LEVEL.hatchX + 0.1, y: 0 });
   assert.equal(run.wobbleCoilInstalled, true);
-  assert.equal(run.objective, 'WOBBLE COIL INSTALLED');
+  assert.equal(run.objective, 'FIND BACKPACK');
   assert.equal(run.state, 'stranded');
 });
 

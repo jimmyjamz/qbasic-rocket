@@ -7,13 +7,33 @@ const loopStatusLabel = document.querySelector('#loopStatus');
 const helpLabel = document.querySelector('#helpText');
 
 function getSneakleMission(run) {
+  if (run.fluxCapacitorCollected) {
+    return {
+      title: 'Flux Capacitor found',
+      objective: 'The weird helpful alien accepted the Cheetos and gave you Icky Sticky Slime plus the Flux Capacitor.',
+      badge: 'Flux found',
+      action: 'Repair pending',
+      help: 'Flux Capacitor found. The UFO still needs a later repair/install step before it can fly.'
+    };
+  }
+
+  if (run.hasCheetos) {
+    return {
+      title: 'Trade the Cheetos',
+      objective: 'A weird helpful Sneakle alien wants the Cheetos. Bring the snack bag over and see what it gives back.',
+      badge: 'Cheetos',
+      action: 'Trade snack',
+      help: 'Cheetos found. Head right to the weird helpful alien asking for snacks.'
+    };
+  }
+
   if (run.wobbleCoilInstalled) {
     return {
-      title: 'Wobble Coil installed',
-      objective: 'The Wobble Coil is hooked into the UFO. More repair weirdness is still pending.',
-      badge: 'Installed',
-      action: 'Repair pending',
-      help: 'Wobble Coil installed. The UFO still needs more help before it can fly.'
+      title: 'Find the backpack',
+      objective: 'The rocket thieves tossed your backpack out the window. Find it to recover the Cheetos.',
+      badge: 'Backpack',
+      action: 'Find backpack',
+      help: 'Wobble Coil installed. Move left and find the backpack the thieves threw from the rocket.'
     };
   }
 
@@ -87,7 +107,7 @@ function renderMissionCard(mission) {
 }
 
 function renderSneakleStatus() {
-  const run = surfaceAdventure.active ? surfaceAdventure.run : null;
+  const run = surfaceAdventure.run;
   if (run?.level?.kind === 'theft' && run.state === 'stranded') {
     const mission = getSneakleMission(run);
     publishSneakleNonRescueState(run);
