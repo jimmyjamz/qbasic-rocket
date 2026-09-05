@@ -106,8 +106,60 @@ function renderMissionCard(mission) {
   });
 }
 
+function getTradeSmokeText(run) {
+  if (!run?.level || run.level.kind !== 'theft') return '';
+  if (run.state === 'stealing' && run.theftBoardingProgress > 0.62 && run.theftProgress < 0.5) {
+    return 'RKT-73: 🎒 BACKPACK THROWN FROM ROCKET';
+  }
+  if (run.state !== 'stranded') return '';
+  if (run.fluxCapacitorCollected) return 'RKT-73: 🧪 ICKY STICKY SLIME + ⚡ FLUX CAPACITOR FOUND';
+  if (run.hasCheetos) return 'RKT-73: 👽 WEIRD ALIEN WANTS CHEETOS';
+  if (run.wobbleCoilInstalled) return 'RKT-73: 🎒 FIND TOSSED BACKPACK · CHEETOS INSIDE';
+  if (run.ufoDiscovered) return 'RKT-73: 👽 WEIRD ALIEN WAITING LEFT OF UFO';
+  return '';
+}
+
+function ensureTradeSmokeOverlay() {
+  let overlay = document.querySelector('#sneakleTradeSmokeOverlay');
+  if (overlay) return overlay;
+
+  overlay = document.createElement('div');
+  overlay.id = 'sneakleTradeSmokeOverlay';
+  overlay.style.position = 'fixed';
+  overlay.style.left = '50%';
+  overlay.style.bottom = '92px';
+  overlay.style.transform = 'translateX(-50%)';
+  overlay.style.padding = '12px 18px';
+  overlay.style.border = '3px solid #ffdd66';
+  overlay.style.borderRadius = '14px';
+  overlay.style.background = 'rgba(32, 16, 56, 0.92)';
+  overlay.style.color = '#fff9d7';
+  overlay.style.font = 'bold 18px system-ui, sans-serif';
+  overlay.style.letterSpacing = '0.02em';
+  overlay.style.textAlign = 'center';
+  overlay.style.zIndex = '9999';
+  overlay.style.pointerEvents = 'none';
+  overlay.style.boxShadow = '0 0 18px rgba(255, 221, 102, 0.45)';
+  overlay.style.display = 'none';
+  document.body.appendChild(overlay);
+  return overlay;
+}
+
+function renderTradeSmokeOverlay(run) {
+  const overlay = ensureTradeSmokeOverlay();
+  const text = getTradeSmokeText(run);
+  overlay.textContent = text;
+  overlay.style.display = text ? 'block' : 'none';
+}
+
 function renderSneakleStatus() {
-  const run = surfaceAdventure.active ? surfaceAdventure.run : null;
+  const run = surfaceAdventure.run;
+  if (run?.level?.kind === 'theft' && ['stealing', 'stranded'].includes(run.state)) {
+    renderTradeSmokeOverlay(run);
+  } else {
+    renderTradeSmokeOverlay(null);
+  }
+
   if (run?.level?.kind === 'theft' && run.state === 'stranded') {
     const mission = getSneakleMission(run);
     publishSneakleNonRescueState(run);
