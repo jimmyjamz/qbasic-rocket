@@ -1735,6 +1735,10 @@ function startDevTestWalking(stage) {
       localX = (level.ufoApproachX ?? level.ufoX) + 0.05;
     } else if (stage === 'hatch') {
       localX = (level.ufoBodyLeft ?? level.hatchX ?? level.ufoApproachX) - (level.radius ?? 0.24) - 0.35;
+    } else if (stage === 'backpack') {
+      localX = level.backpackX - level.backpackRadius - 0.5;
+    } else if (stage === 'cheetos' || stage === 'flux') {
+      localX = level.tradeAlienX - level.tradeAlienRadius - 0.5;
     }
   }
 

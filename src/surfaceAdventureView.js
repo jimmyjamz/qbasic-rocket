@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { SPROUT_LEVEL } from './surfaceAdventureState.js';
+import { SPROUT_LEVEL, THEFT_SEQUENCE_SECONDS, THEFT_LAUNCH_PROGRESS } from './surfaceAdventureState.js';
 
 export function createSurfaceAdventureView(createAstronaut, level = SPROUT_LEVEL) {
   const cinder = level.kind === 'steam';
@@ -235,7 +235,7 @@ export function createSurfaceAdventureView(createAstronaut, level = SPROUT_LEVEL
     trail.name = 'sneakleVisibleWobbleCoilTrail';
     trail.visible = false;
 
-    const platformMaterial = new THREE.MeshBasicMaterial({ color: 0x9f7dff, depthTest: false });
+    const platformMaterial = new THREE.MeshStandardMaterial({ color: 0x79649e, roughness: 0.85 });
     const lampMaterial = new THREE.MeshBasicMaterial({ color: 0xfff066, depthTest: false });
     const coilMaterial = new THREE.MeshBasicMaterial({ color: 0xff6a00, depthTest: false });
     const coreMaterial = new THREE.MeshBasicMaterial({ color: 0x7df5ff, depthTest: false });
@@ -246,14 +246,14 @@ export function createSurfaceAdventureView(createAstronaut, level = SPROUT_LEVEL
       const y = 0.78 + index * 0.34;
       const platform = new THREE.Mesh(new THREE.BoxGeometry(index === platformXs.length - 1 ? 1.8 : 1.18, 0.2, 0.82), platformMaterial);
       platform.name = `sneakleVisibleScrapHop${index + 1}`;
-      platform.position.set(x, y, 1.0);
+      platform.position.set(x, y, -0.8);
       platform.rotation.z = index % 2 === 0 ? -0.08 : 0.08;
       platform.renderOrder = 20;
       trail.add(platform);
 
-      const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.15, 12, 8), lampMaterial);
+      const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.075, 12, 8), lampMaterial);
       lamp.name = `sneakleVisibleScrapLamp${index + 1}`;
-      lamp.position.set(x, y + 0.36, 1.08);
+      lamp.position.set(x, y + 0.2, -0.8);
       lamp.renderOrder = 21;
       trail.add(lamp);
     });
@@ -261,7 +261,7 @@ export function createSurfaceAdventureView(createAstronaut, level = SPROUT_LEVEL
     for (const x of [21.25, 20.45, 19.65]) {
       const arrow = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.48, 3), arrowMaterial);
       arrow.name = 'sneakleVisibleCoilArrow';
-      arrow.position.set(x, 1.75, 1.1);
+      arrow.position.set(x, 1.75, -0.65);
       arrow.rotation.z = Math.PI / 2;
       arrow.renderOrder = 21;
       trail.add(arrow);
@@ -269,13 +269,13 @@ export function createSurfaceAdventureView(createAstronaut, level = SPROUT_LEVEL
 
     const shelf = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.22, 0.9), platformMaterial);
     shelf.name = 'sneakleVisibleWobbleCoilShelf';
-    shelf.position.set(level.wobbleCoilX ?? 18.4, (level.wobbleCoilY ?? 2.05) - 0.28, 1.0);
+    shelf.position.set(level.wobbleCoilX ?? 18.4, (level.wobbleCoilY ?? 2.05) - 0.28, -0.8);
     shelf.renderOrder = 20;
     trail.add(shelf);
 
     const coilGroup = new THREE.Group();
     coilGroup.name = 'sneakleVisibleWobbleCoilPickup';
-    coilGroup.position.set(level.wobbleCoilX ?? 18.4, level.wobbleCoilY ?? 2.05, 1.12);
+    coilGroup.position.set(level.wobbleCoilX ?? 18.4, level.wobbleCoilY ?? 2.05, -0.65);
     const coil = new THREE.Mesh(new THREE.TorusGeometry(0.5, 0.1, 12, 36), coilMaterial);
     coil.name = 'sneakleVisibleWobbleCoil';
     coil.rotation.x = Math.PI / 2;
@@ -295,6 +295,235 @@ export function createSurfaceAdventureView(createAstronaut, level = SPROUT_LEVEL
     trail.userData.beaconHomeY = beacon.position.y;
 
     return trail;
+  }
+  // RKT-73 belongs to this surface view, just like the coil trail.
+  function makeLabel(text, x, y, width = 2.4) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 768;
+    canvas.height = 128;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#24103d';
+    ctx.fillRect(0, 0, 768, 128);
+    ctx.strokeStyle = '#ffdd66';
+    ctx.lineWidth = 8;
+    ctx.strokeRect(4, 4, 760, 120);
+    ctx.fillStyle = '#fff9d7';
+    ctx.font = 'bold 44px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, 384, 64);
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    const label = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, depthTest: false, depthWrite: false }));
+    label.position.set(x, y, 2.4);
+    label.scale.set(width, width / 6, 1);
+    label.renderOrder = 250;
+    label.visible = false;
+    return label;
+  }
+
+  function createBackpack() {
+    const backpack = new THREE.Group();
+    backpack.name = 'sneakleGroundedCheetosBackpack';
+    backpack.visible = false;
+    const fabric = new THREE.MeshStandardMaterial({ color: 0x278cce, roughness: 0.95 });
+    const trim = new THREE.MeshStandardMaterial({ color: 0x123c69, roughness: 0.9 });
+    const zip = new THREE.MeshStandardMaterial({ color: 0xe8c86c, metalness: 0.35, roughness: 0.5 });
+    const add = (geometry, material, x, y, z) => {
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.position.set(x, y, z);
+      backpack.add(mesh);
+      return mesh;
+    };
+    const body = add(new THREE.CapsuleGeometry(0.28, 0.32, 6, 16), fabric, 0, 0, 0);
+    body.scale.z = 0.62;
+    const pocket = add(new THREE.CapsuleGeometry(0.16, 0.16, 5, 12), trim, 0, -0.12, 0.17);
+    pocket.rotation.z = Math.PI / 2;
+    pocket.scale.z = 0.48;
+    add(new THREE.BoxGeometry(0.36, 0.025, 0.025), zip, 0, -0.035, 0.25);
+    add(new THREE.BoxGeometry(0.025, 0.085, 0.02), zip, 0.14, -0.065, 0.27);
+    const handle = add(new THREE.TorusGeometry(0.1, 0.027, 6, 16, Math.PI), trim, 0, 0.42, 0);
+    handle.name = 'backpackCarryHandle';
+    for (const side of [-1, 1]) {
+      const strap = add(new THREE.TorusGeometry(0.17, 0.035, 6, 20), trim, side * 0.25, -0.015, -0.12);
+      strap.name = 'backpackShoulderStrap';
+      strap.scale.set(0.65, 1.85, 1);
+      strap.rotation.y = side * 0.35;
+      add(new THREE.BoxGeometry(0.055, 0.055, 0.04), zip, side * 0.25, -0.24, -0.08);
+    }
+    // One child-sized bag, in the same depth plane as the astronaut.
+    backpack.scale.setScalar(0.85);
+    backpack.rotation.set(-0.2, 0.15, -1.12);
+    backpack.updateMatrixWorld(true);
+    const groundY = (level.backpackY ?? 0) - new THREE.Box3().setFromObject(backpack).min.y;
+    backpack.position.set(level.backpackX ?? 4.4, groundY, 0.65);
+    backpack.userData.restPosition = backpack.position.clone();
+    backpack.userData.restRotation = backpack.rotation.clone();
+    return backpack;
+  }
+  function createWeirdAlien() {
+    const alien = new THREE.Group();
+    alien.name = 'sneakleVisibleWeirdHelpfulAlien';
+    alien.visible = false;
+
+    const green = new THREE.MeshStandardMaterial({ color: 0xa8ef58, roughness: 0.75 });
+    const belly = new THREE.MeshStandardMaterial({ color: 0xf4ff8a, roughness: 0.75 });
+    const black = new THREE.MeshStandardMaterial({ color: 0x101321, roughness: 0.75 });
+    const slime = new THREE.MeshStandardMaterial({ color: 0x6cffd6, roughness: 0.75 });
+
+    const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.36, 0.58, 6, 14), green);
+    body.position.y = 0.62;
+    body.renderOrder = 240;
+    const tummy = new THREE.Mesh(new THREE.SphereGeometry(0.24, 12, 8), belly);
+    tummy.position.set(0, 0.58, 0.29);
+    tummy.scale.set(1.25, 0.8, 0.7);
+    tummy.renderOrder = 241;
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.45, 16, 10), green);
+    head.scale.set(1.2, 0.86, 0.86);
+    head.position.y = 1.25;
+    head.renderOrder = 242;
+    alien.add(body, tummy, head);
+
+    for (const x of [-0.15, 0.15]) {
+      const eye = new THREE.Mesh(new THREE.SphereGeometry(0.075, 8, 6), black);
+      eye.position.set(x, 1.3, 0.35);
+      eye.renderOrder = 243;
+      alien.add(eye);
+
+      const antenna = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.032, 0.42, 6), green);
+      antenna.position.set(x * 1.2, 1.62, 0.04);
+      antenna.rotation.z = x < 0 ? -0.34 : 0.34;
+      antenna.renderOrder = 242;
+      alien.add(antenna);
+
+      const bobble = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 6), slime);
+      bobble.position.set(x * 1.75, 1.82, 0.1);
+      bobble.renderOrder = 243;
+      alien.add(bobble);
+    }
+
+    const jar = new THREE.Mesh(new THREE.SphereGeometry(0.2, 12, 8), slime);
+    jar.name = 'sneakleVisibleSlimeJar';
+    jar.position.set(0.55, 0.68, 0.32);
+    jar.renderOrder = 244;
+    alien.add(jar);
+
+    for (const side of [-1, 1]) {
+      const foot = new THREE.Mesh(new THREE.SphereGeometry(0.16, 12, 8), green);
+      foot.scale.set(0.9, 0.55, 1.5);
+      foot.position.set(side * 0.2, 0.085, 0.1);
+      alien.add(foot);
+    }
+    alien.position.set(level.tradeAlienX ?? 20.6, level.tradeAlienY ?? 0, 0.18);
+    alien.scale.setScalar(0.7);
+    return alien;
+  }
+
+  function createTradePrize() {
+    const prize = new THREE.Group();
+    prize.name = 'sneakleVisibleTradePrize';
+    prize.visible = false;
+
+    const slimeMaterial = new THREE.MeshStandardMaterial({ color: 0x6cffd6, transparent: true, opacity: 0.84, roughness: 0.75 });
+    const fluxMaterial = new THREE.MeshStandardMaterial({ color: 0xff66ff, roughness: 0.75 });
+    const glowMaterial = new THREE.MeshStandardMaterial({ color: 0xfff066, roughness: 0.75 });
+
+    const slime = new THREE.Mesh(new THREE.SphereGeometry(0.38, 18, 10), slimeMaterial);
+    slime.scale.set(1.35, 0.58, 0.82);
+    slime.position.set(-0.24, 0.42, 0.0);
+    slime.renderOrder = 242;
+
+    const flux = new THREE.Mesh(new THREE.OctahedronGeometry(0.38, 1), fluxMaterial);
+    flux.name = 'sneakleVisibleFluxCapacitor';
+    flux.position.set(0.48, 0.92, 0.12);
+    flux.renderOrder = 244;
+
+    const spark = new THREE.Mesh(new THREE.SphereGeometry(0.13, 10, 8), glowMaterial);
+    spark.name = 'sneakleVisibleFluxSpark';
+    spark.position.set(0.48, 1.42, 0.16);
+    spark.renderOrder = 245;
+
+    prize.add(slime, flux, spark);
+    prize.userData.flux = flux;
+    prize.userData.spark = spark;
+    prize.position.set((level.tradeAlienX ?? 20.6) + 0.85, 0, 0.3);
+    prize.scale.setScalar(0.65);
+    return prize;
+  }
+
+  function createTradeOverlay() {
+    const overlay = new THREE.Group();
+    overlay.name = 'sneakleVisibleCheetosTradeOverlay';
+    overlay.visible = false;
+
+
+    const backpack = createBackpack();
+    const alien = createWeirdAlien();
+    const prize = createTradePrize();
+    const throwLabel = makeLabel('BACKPACK!', 3.4, 3.05, 1.95);
+    const backpackLabel = makeLabel('TOSSED BACKPACK · CHEETOS', level.backpackX ?? 4.4, 2.15, 3.5);
+    const alienLabel = makeLabel('CHEETOS?', level.tradeAlienX ?? 20.6, 1.75, 1.3);
+    const prizeLabel = makeLabel('ICKY SLIME + FLUX', (level.tradeAlienX ?? 20.6) + 0.5, 1.85, 2.0);
+
+    alienLabel.position.z = 0.4;
+    prizeLabel.position.z = 0.4;
+    overlay.add(backpack, alien, prize, throwLabel, backpackLabel, alienLabel, prizeLabel);
+    overlay.userData = { backpack, alien, prize, throwLabel, backpackLabel, alienLabel, prizeLabel };
+    return overlay;
+  }
+
+  function updateCheetosTrade(run, now = performance.now()) {
+
+    if (!tradeOverlay || !run || run.level?.kind !== 'theft') return;
+
+    const time = now * 0.001;
+    tradeOverlay.visible = true;
+
+    const { backpack, alien, prize, throwLabel, backpackLabel, alienLabel, prizeLabel } = tradeOverlay.userData;
+
+    const stranded = run.state === 'stranded';
+    const backpackVisible = stranded && !run.hasCheetos && !run.backpackRecovered && !run.fluxCapacitorCollected;
+    const backpackLabelVisible = backpackVisible && run.wobbleCoilInstalled;
+    const alienVisible = stranded && !run.fluxCapacitorCollected;
+    const alienLabelVisible = alienVisible && run.wobbleCoilInstalled;
+    const prizeVisible = stranded && run.fluxCapacitorCollected;
+
+    // Keep the same mesh through the toss, landing, and stranded phases.
+    // Match the launch curve: rocket rises 8.2 units with cubic ease-out.
+    // A 2.1-unit rise brings its base to the yellow treetops above the surface.
+    const treetopProgress = 1 - Math.cbrt(1 - 2.1 / 8.2);
+    const tossStartSeconds = THEFT_SEQUENCE_SECONDS * (THEFT_LAUNCH_PROGRESS + treetopProgress * (1 - THEFT_LAUNCH_PROGRESS));
+    const tossDurationSeconds = 1.1;
+    const tossing = run.state === 'stealing' && run.theftElapsedSeconds > tossStartSeconds;
+    backpack.visible = backpackVisible || tossing;
+    backpack.position.copy(backpack.userData.restPosition);
+    backpack.rotation.copy(backpack.userData.restRotation);
+    const t = THREE.MathUtils.clamp((run.theftElapsedSeconds - tossStartSeconds) / tossDurationSeconds, 0, 1);
+    if (tossing && t < 1) {
+      backpack.position.x = THREE.MathUtils.lerp(0.7, backpack.userData.restPosition.x, t);
+      backpack.position.y += (1 - t) * 1.05 + Math.sin(t * Math.PI) * 1.35;
+      backpack.position.z = THREE.MathUtils.lerp(0.18, backpack.userData.restPosition.z, t);
+      backpack.rotation.z += (1 - t) * Math.PI * 2;
+    }
+    throwLabel.visible = tossing && t < 1;
+    if (backpackLabel) backpackLabel.visible = backpackLabelVisible;
+
+    if (alien) {
+      alien.visible = alienVisible || prizeVisible;
+      alien.position.y = level.tradeAlienY ?? 0;
+      alien.rotation.y = -0.15 + Math.sin(time * 1.2) * 0.045;
+    }
+    if (alienLabel) alienLabel.visible = alienLabelVisible && !prizeVisible;
+
+    if (prize) {
+      prize.visible = prizeVisible;
+      if (prizeVisible) {
+        prize.userData.flux.rotation.y += 0.1;
+        prize.userData.spark.scale.setScalar(1.1 + Math.sin(time * 9) * 0.22);
+      }
+    }
+    if (prizeLabel) prizeLabel.visible = prizeVisible;
   }
   const alienCrowd = new THREE.Group();
   const friendlyAlien = createAlien();
@@ -328,6 +557,7 @@ export function createSurfaceAdventureView(createAstronaut, level = SPROUT_LEVEL
   const thiefCrew = new THREE.Group();
   const brokenUfo = new THREE.Group();
   const wobbleCoilTrail = theft ? createWobbleCoilTrail() : null;
+  const tradeOverlay = theft ? createTradeOverlay() : null;
   const wobbleTrailSign = theft ? sign('COIL TRAIL ←', level.hatchX - 1.05, 2.95, 2.45) : null;
   const wobbleCoilSign = theft ? sign('WOBBLE COIL', level.wobbleCoilX ?? 18.4, (level.wobbleCoilY ?? 2.05) + 1.2, 2.2) : null;
   if (wobbleTrailSign) wobbleTrailSign.visible = false;
@@ -353,7 +583,7 @@ export function createSurfaceAdventureView(createAstronaut, level = SPROUT_LEVEL
     brokenUfo.position.set(level.ufoX, 0, -0.12);
     brokenUfo.visible = false;
     group.add(brokenUfo);
-    group.add(wobbleCoilTrail);
+    group.add(wobbleCoilTrail, tradeOverlay);
   }
   const portal = new THREE.Mesh(new THREE.TorusGeometry(0.65, 0.025, 8, 40), glow);
   portal.rotation.x = Math.PI / 2;
@@ -458,10 +688,16 @@ export function createSurfaceAdventureView(createAstronaut, level = SPROUT_LEVEL
             }
           });
         });
+        updateCheetosTrade(run);
         const platformsVisible = run.state === 'stranded' && run.ufoHatchInspected;
         const coilPickupVisible = platformsVisible && !run.wobbleCoilCollected;
         if (wobbleCoilTrail) wobbleCoilTrail.visible = platformsVisible;
         if (wobbleCoilTrail?.userData?.coilPickup) wobbleCoilTrail.userData.coilPickup.visible = coilPickupVisible;
+        wobbleCoilTrail.children.forEach((part) => {
+          if (part.name === 'sneakleVisibleCoilArrow' || part.name.startsWith('sneakleVisibleScrapLamp')) {
+            part.visible = coilPickupVisible;
+          }
+        });
         if (wobbleTrailSign) wobbleTrailSign.visible = coilPickupVisible;
         if (wobbleCoilSign) wobbleCoilSign.visible = coilPickupVisible;
         if (coilPickupVisible && wobbleCoilTrail?.userData?.coil) {
