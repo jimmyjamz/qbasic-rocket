@@ -11,7 +11,7 @@ export function getDevTestStartRequest(location = window.location) {
   const stage = normalizeToken(params.get('testStage') ?? 'select');
 
   if (!['sneakle', 'sneakle5'].includes(planet)) return null;
-  if (!['select', 'ready', 'landed', 'stranded', 'ufo', 'hatch', 'backpack', 'cheetos', 'flux'].includes(stage)) {
+  if (!['select', 'ready', 'landed', 'stranded', 'ufo', 'hatch', 'backpack', 'cheetos', 'flux', 'repaired', 'ufoready'].includes(stage)) {
     return { planet: 'sneakle', stage: 'select' };
   }
 
@@ -24,7 +24,7 @@ export function normalizeToken(value = '') {
 
 export function primeSneakleRunForStage(stage) {
   const run = surfaceAdventure.run;
-  const tradeStage = ['backpack', 'cheetos', 'flux'].includes(stage);
+  const tradeStage = ['backpack', 'cheetos', 'flux', 'repaired', 'ufoready'].includes(stage);
 
   if (stage === 'stranded' || stage === 'ufo' || stage === 'hatch' || tradeStage) {
     run.startTheft();
@@ -44,10 +44,15 @@ export function primeSneakleRunForStage(stage) {
       THEFT_LEVEL, false
     ));
     run.update(0.16, { x: THEFT_LEVEL.hatchX, y: 0 });
-    if (stage === 'cheetos' || stage === 'flux') {
+    if (stage === 'cheetos' || stage === 'flux' || stage === 'repaired' || stage === 'ufoready') {
       run.update(0.16, { x: THEFT_LEVEL.backpackX, y: 0 });
     }
-    if (stage === 'flux') run.update(0.16, { x: THEFT_LEVEL.tradeAlienX, y: 0 });
+    if (stage === 'flux' || stage === 'repaired' || stage === 'ufoready') {
+      run.update(0.16, { x: THEFT_LEVEL.tradeAlienX, y: 0 });
+    }
+    if (stage === 'repaired' || stage === 'ufoready') {
+      run.update(0.16, { x: THEFT_LEVEL.fluxInstallX, y: 0 });
+    }
   }
 
   return run;
