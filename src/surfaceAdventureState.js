@@ -33,10 +33,12 @@ export const THEFT_LEVEL = Object.freeze({
   backpackX: 4.4, backpackY: 0, backpackRadius: 0.9, cheetosLabel: 'CHEETOS',
   tradeAlienX: 20.6, tradeAlienY: 0, tradeAlienRadius: 1.15,
   slimeLabel: 'ICKY STICKY SLIME', fluxCapacitorLabel: 'FLUX CAPACITOR', clueX: 10.5,
+  fluxInstallX: 22.2, fluxInstallRadius: 1.15,
   ufoBodyLeft: 23.45, ufoBodyRight: 26.35, ufoBodyHeight: 1.12,
   // RKT-70 uses a raised hatch diagnostic panel, not a repair part sitting on the UFO.
   // RKT-72 places the Wobble Coil on an elevated scrap route so it is not a simple left/right pickup.
   // RKT-73 starts the backpack/Cheetos/weird alien trade chain for the Flux Capacitor.
+  // RKT-75 makes the Flux Capacitor a level-local install item and leaves UFO travel for a later slice.
   // The crashed UFO blocks ground walking so the player cannot pass through the saucer.
   // The inspection zone remains forgiving so a kid-friendly hover near the panel works.
   // Extended underground traversal and hard blockers remain deferred.
@@ -214,6 +216,8 @@ export function createSurfaceRun(level = SPROUT_LEVEL) {
   let cheetosTraded = false;
   let stickySlimeReceived = false;
   let fluxCapacitorCollected = false;
+  let fluxCapacitorInstalled = false;
+  let ufoLaunchReady = false;
   const run = {
     level,
     get hasPickaxe() { return hasPickaxe; },
@@ -222,7 +226,8 @@ export function createSurfaceRun(level = SPROUT_LEVEL) {
     get objective() {
       if (level.kind === 'theft') {
         if (run.state === 'stealing') return 'ROCKET THEFT!';
-        if (fluxCapacitorCollected) return 'FLUX CAPACITOR FOUND';
+        if (ufoLaunchReady) return 'UFO READY';
+        if (fluxCapacitorCollected) return 'RETURN TO UFO';
         if (hasCheetos) return 'TRADE CHEETOS';
         if (wobbleCoilInstalled) return 'FIND BACKPACK';
         if (wobbleCoilCollected) return 'RETURN TO UFO';
@@ -247,6 +252,8 @@ export function createSurfaceRun(level = SPROUT_LEVEL) {
     get cheetosTraded() { return cheetosTraded; },
     get stickySlimeReceived() { return stickySlimeReceived; },
     get fluxCapacitorCollected() { return fluxCapacitorCollected; },
+    get fluxCapacitorInstalled() { return fluxCapacitorInstalled; },
+    get ufoLaunchReady() { return ufoLaunchReady; },
     get theftArea() { return ufoDiscovered ? 'underground' : 'surface'; },
     get canInspectUfo() {
       return level.kind === 'theft' && run.state === 'stranded' &&
@@ -294,6 +301,12 @@ export function createSurfaceRun(level = SPROUT_LEVEL) {
       const radius = level.tradeAlienRadius ?? 1.1;
       return Math.abs(run.player.x - alienX) < radius && run.player.y < 1.05;
     },
+    get canInstallFluxCapacitor() {
+      if (level.kind !== 'theft' || run.state !== 'stranded' || !fluxCapacitorCollected || fluxCapacitorInstalled) return false;
+      const hatchX = level.fluxInstallX ?? level.hatchX ?? level.ufoApproachX ?? level.ufoX;
+      const radius = level.fluxInstallRadius ?? 1.15;
+      return Math.abs(run.player.x - hatchX) < radius && run.player.y < 0.95;
+    },
     get canEnterGarden() { return level.kind === 'aliens' && contactStage === 'gate' && Math.abs(run.player.x - level.gateX) < 1.6 && run.player.y < 0.75; },
     get canWelcome() { return level.kind === 'aliens' && contactStage === 'garden' && Math.abs(run.player.x - level.targetX) < 1.25 && run.player.y < 0.75; },
     prepareContact(hasTranslator, completed = false) {
@@ -316,6 +329,8 @@ export function createSurfaceRun(level = SPROUT_LEVEL) {
         cheetosTraded = false;
         stickySlimeReceived = false;
         fluxCapacitorCollected = false;
+        fluxCapacitorInstalled = false;
+        ufoLaunchReady = false;
       }
     },
     tick(dt, player) {
@@ -353,6 +368,8 @@ export function createSurfaceRun(level = SPROUT_LEVEL) {
       cheetosTraded = false;
       stickySlimeReceived = false;
       fluxCapacitorCollected = false;
+      fluxCapacitorInstalled = false;
+      ufoLaunchReady = false;
     },
     update(dt, player) {
       clock += dt;
@@ -397,7 +414,7 @@ export function createSurfaceRun(level = SPROUT_LEVEL) {
               wobbleCoilInstalled = true;
               run.progress = 0;
             }
-          } else if (!hasCheetos) {
+          } else if (!hasCheetos && !fluxCapacitorCollected) {
             const hatchX = level.hatchX ?? level.ufoApproachX ?? level.ufoX;
             const backpackX = level.backpackX ?? 4;
             run.progress = Math.max(0, Math.min(99, (hatchX - player.x) / Math.max(1, hatchX - backpackX) * 100));
@@ -415,6 +432,15 @@ export function createSurfaceRun(level = SPROUT_LEVEL) {
               hasCheetos = false;
               stickySlimeReceived = true;
               fluxCapacitorCollected = true;
+              run.progress = 0;
+            }
+          } else if (!fluxCapacitorInstalled) {
+            const alienX = level.tradeAlienX ?? 18;
+            const hatchX = level.fluxInstallX ?? level.hatchX ?? level.ufoApproachX ?? level.ufoX;
+            run.progress = Math.max(0, Math.min(99, (alienX - player.x) / Math.max(1, alienX - hatchX) * 100));
+            if (run.canInstallFluxCapacitor) {
+              fluxCapacitorInstalled = true;
+              ufoLaunchReady = true;
               run.progress = 100;
             }
           } else {
