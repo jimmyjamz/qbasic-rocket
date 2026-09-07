@@ -37,7 +37,7 @@ test('surface view owns and updates the full Sneakle trade, including reset and 
     assert.equal(backpack.position.x, THEFT_LEVEL.backpackX);
     assert.equal(alien.position.x, THEFT_LEVEL.tradeAlienX);
 
-    for (const stage of ['backpack', 'cheetos', 'flux', 'repaired']) {
+    for (const stage of ['backpack', 'cheetos', 'flux']) {
       assert.equal(getDevTestStartRequest(new URL(`http://localhost/?testStage=${stage}`)).stage, stage);
       assert.equal(getDevTestStartRequest(new URL(`https://example.com/?testStage=${stage}`)), null);
       surfaceAdventure.run = createSurfaceRun(THEFT_LEVEL);
@@ -46,14 +46,21 @@ test('surface view owns and updates the full Sneakle trade, including reset and 
       view.update(staged);
       assert.equal(backpack.visible, stage === 'backpack');
       assert.equal(backpackLabel.visible, stage === 'backpack');
-      assert.equal(alien.visible, stage !== 'repaired');
-      assert.equal(alienLabel.visible, stage === 'backpack' || stage === 'cheetos');
+      assert.equal(alien.visible, true);
+      assert.equal(alienLabel.visible, stage !== 'flux');
       assert.equal(prize.visible, stage === 'flux');
       assert.equal(prizeLabel.visible, stage === 'flux');
       assert.equal(staged.hasCheetos, stage === 'cheetos');
-      assert.equal(staged.fluxCapacitorCollected, stage === 'flux' || stage === 'repaired');
-      assert.equal(staged.ufoLaunchReady, stage === 'repaired');
+      assert.equal(staged.fluxCapacitorCollected, stage === 'flux');
     }
+
+    assert.equal(getDevTestStartRequest(new URL('http://localhost/?testStage=repaired')).stage, 'repaired');
+    assert.equal(getDevTestStartRequest(new URL('http://localhost/?testStage=ufo-ready')).stage, 'ufoready');
+    surfaceAdventure.run = createSurfaceRun(THEFT_LEVEL);
+    const repaired = primeSneakleRunForStage('repaired');
+    assert.equal(repaired.fluxCapacitorCollected, true);
+    assert.equal(repaired.fluxCapacitorInstalled, true);
+    assert.equal(repaired.ufoLaunchReady, true);
 
     const fresh = createSurfaceRun(THEFT_LEVEL);
     view.update(fresh);
