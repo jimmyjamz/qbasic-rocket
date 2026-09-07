@@ -7,13 +7,23 @@ const loopStatusLabel = document.querySelector('#loopStatus');
 const helpLabel = document.querySelector('#helpText');
 
 function getSneakleMission(run) {
+  if (run.ufoLaunchReady) {
+    return {
+      title: 'UFO launch-ready',
+      objective: 'The Wobble Coil and Flux Capacitor are installed. The UFO hums like it can fly, but rocket recovery is still next.',
+      badge: 'UFO ready',
+      action: 'Launch pending',
+      help: 'UFO repaired. A later story will launch it and chase down the stolen rocket.'
+    };
+  }
+
   if (run.fluxCapacitorCollected) {
     return {
-      title: 'Flux Capacitor found',
-      objective: 'The weird helpful alien accepted the Cheetos and gave you Icky Sticky Slime plus the Flux Capacitor.',
-      badge: 'Flux found',
-      action: 'Repair pending',
-      help: 'Flux Capacitor found. The UFO still needs a later repair/install step before it can fly.'
+      title: 'Return to the UFO',
+      objective: 'You have the Icky Sticky Slime and Flux Capacitor. Bring the Flux Capacitor back to the broken UFO hatch.',
+      badge: 'Flux held',
+      action: 'Install flux',
+      help: 'Flux Capacitor found. Head left to the UFO hatch and install it.'
     };
   }
 
