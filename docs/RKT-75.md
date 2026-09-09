@@ -22,6 +22,18 @@ Cheetos trade completes
 - No UFO warp or stolen-rocket recovery yet.
 - Preserve RKT-73 backpack/Cheetos/weird alien trade.
 
+## Visual acceptance
+
+When the UFO is launch-ready, the UFO itself should no longer read as broken:
+
+- smoke is hidden;
+- loose/broken panel treatment is hidden or repaired;
+- saucer is leveled into a ready posture;
+- cyan ready lights / repaired hatch patch appear;
+- leftover Flux reward at the alien is hidden after install.
+
+The `UFO READY · HUMMMMM!` banner is only supporting feedback; it is not sufficient by itself.
+
 ## Fast test URLs
 
 ```text
@@ -36,7 +48,8 @@ http://localhost:5173/?testPlanet=sneakle&testStage=ufo-ready
 2. Confirm objective is `RETURN TO UFO`.
 3. Move back to the UFO hatch.
 4. Confirm objective becomes `UFO READY`.
-5. Confirm `?testPlanet=sneakle&testStage=repaired` starts directly at the launch-ready state.
+5. Confirm the UFO mesh itself appears repaired / launch-ready.
+6. Confirm `?testPlanet=sneakle&testStage=repaired` starts directly at the launch-ready state.
 
 ## Deferred
 
