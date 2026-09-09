@@ -130,8 +130,8 @@ export function updateSneakleUfoRepairVisuals(scene, now = performance.now()) {
   }
 }
 
-const originalRender = THREE.WebGLRenderer.prototype.render;
-if (!patched) {
+const originalRender = THREE.WebGLRenderer?.prototype?.render;
+if (originalRender && !patched) {
   patched = true;
   THREE.WebGLRenderer.prototype.render = function renderWithSneakleRepairPayoff(scene, camera) {
     updateSneakleUfoRepairVisuals(scene, performance.now());
