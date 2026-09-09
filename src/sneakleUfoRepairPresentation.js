@@ -17,7 +17,15 @@ export function isSneakleUfoSmokePart(part) {
 }
 
 export function isSneakleBrokenPanelPart(part) {
-  return part?.isMesh && part?.material?.color?.equals?.(DARK_CRACK);
+  return part?.isMesh &&
+    part?.geometry?.type === 'BoxGeometry' &&
+    part?.material?.color?.equals?.(DARK_CRACK);
+}
+
+function isSneakleUfoReady() {
+  const run = surfaceAdventure.run;
+  return run?.level?.kind === 'theft' && run.state === 'stranded' &&
+    (run.ufoLaunchReady || document?.body?.dataset?.rocketTheftObjective === 'UFO READY');
 }
 
 function rememberOriginal(part) {
@@ -61,7 +69,7 @@ export function ensureSneakleUfoReadyLights(ufoGroup) {
 
   lights = new THREE.Group();
   lights.name = 'sneakleUfoReadyLights';
-  [-0.8, -0.4, 0, 0.4, 0.8].forEach((x, index) => {
+  [-0.95, -0.48, 0, 0.48, 0.95].forEach((x, index) => {
     const light = createReadyLight(index);
     light.position.set(x, 0.92, 0.62);
     lights.add(light);
@@ -71,14 +79,30 @@ export function ensureSneakleUfoReadyLights(ufoGroup) {
   return lights;
 }
 
-export function updateSneakleUfoRepairVisuals(scene, now = performance.now()) {
-  const run = surfaceAdventure.run;
-  const shouldRepair = run?.level?.kind === 'theft' && run.state === 'stranded' && run.ufoLaunchReady;
-  const theftView = scene.getObjectByName?.('theftSurfaceAdventure');
-  if (!theftView) return;
+function findUfoGroup(scene) {
+  let ufoGroup = null;
+  scene?.traverse?.((object) => {
+    if (ufoGroup) return;
+    const hasSmokeChild = object?.children?.some?.((child) => child?.userData?.smokePhase !== undefined);
+    const hasSparkChild = object?.children?.some?.((child) => child?.userData?.sparkPhase !== undefined);
+    if (hasSmokeChild && hasSparkChild) ufoGroup = object;
+  });
+  return ufoGroup;
+}
 
-  theftView.traverse((part) => {
+export function updateSneakleUfoRepairVisuals(scene, now = performance.now()) {
+  const shouldRepair = isSneakleUfoReady();
+  let foundUfoPart = false;
+
+  scene?.traverse?.((part) => {
     if (!part?.isMesh) return;
+    const isSmoke = isSneakleUfoSmokePart(part);
+    const isBrokenPanel = isSneakleBrokenPanelPart(part);
+    const isSpark = part.userData?.sparkPhase !== undefined;
+    const isLikelyHull = part.geometry?.type === 'CylinderGeometry' && part.position?.y > 0.55;
+
+    if (!isSmoke && !isBrokenPanel && !isSpark && !isLikelyHull) return;
+    foundUfoPart = true;
     rememberOriginal(part);
 
     if (!shouldRepair) {
@@ -86,43 +110,39 @@ export function updateSneakleUfoRepairVisuals(scene, now = performance.now()) {
       return;
     }
 
-    if (isSneakleUfoSmokePart(part)) {
+    if (isSmoke) {
       part.visible = false;
       return;
     }
 
-    if (part.userData?.sparkPhase !== undefined) {
+    if (isSpark) {
       part.visible = true;
       part.material.color.copy(READY_GLOW);
       part.scale.setScalar(1.45 + Math.sin(now * 0.008 + part.userData.sparkPhase) * 0.18);
       return;
     }
 
-    if (isSneakleBrokenPanelPart(part)) {
+    if (isBrokenPanel) {
       part.visible = true;
       part.material.color.copy(REPAIRED_PANEL);
       part.scale.set(0.9, 1.8, 1.8);
       return;
     }
 
-    if (part.geometry?.type === 'CylinderGeometry' && part.position?.y > 0.55) {
-      part.material.color.lerp(READY_HULL, 0.35);
-    }
-
-    if (part.material?.emissive) {
-      part.material.emissive.copy(READY_GLOW);
-      part.material.emissiveIntensity = Math.max(part.material.emissiveIntensity ?? 0, 0.18);
+    if (isLikelyHull && part.material?.color) {
+      part.material.color.copy(READY_HULL);
+      if (part.material?.emissive) {
+        part.material.emissive.copy(READY_GLOW);
+        part.material.emissiveIntensity = Math.max(part.material.emissiveIntensity ?? 0, 0.2);
+      }
     }
   });
 
-  const brokenUfoShell = theftView.children.find((child) => child?.children?.some?.((grandchild) =>
-    grandchild?.children?.some?.((part) => part?.userData?.smokePhase !== undefined)
-  ));
-  const ufoGroup = brokenUfoShell?.children?.[0];
+  const ufoGroup = findUfoGroup(scene);
   if (!ufoGroup) return;
 
   const lights = ensureSneakleUfoReadyLights(ufoGroup);
-  lights.visible = shouldRepair;
+  lights.visible = shouldRepair && foundUfoPart;
   if (shouldRepair) {
     lights.children.forEach((light, index) => {
       light.scale.setScalar(1.0 + Math.sin(now * 0.007 + index) * 0.22);
