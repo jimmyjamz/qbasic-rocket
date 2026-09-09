@@ -11,12 +11,12 @@ const DARK_CRACK = new THREE.Color(0x14091f);
 const SMOKEY = new THREE.Color(0x6b6383);
 let patched = false;
 
-function isLikelySmoke(part) {
+export function isSneakleUfoSmokePart(part) {
   return part?.userData?.smokePhase !== undefined ||
     (part?.material?.transparent === true && part?.material?.color?.equals?.(SMOKEY));
 }
 
-function isLikelyBrokenPanel(part) {
+export function isSneakleBrokenPanelPart(part) {
   return part?.isMesh && part?.material?.color?.equals?.(DARK_CRACK);
 }
 
@@ -55,7 +55,7 @@ function createReadyLight(index) {
   return light;
 }
 
-function ensureReadyLights(ufoGroup) {
+export function ensureSneakleUfoReadyLights(ufoGroup) {
   let lights = ufoGroup.getObjectByName('sneakleUfoReadyLights');
   if (lights) return lights;
 
@@ -71,7 +71,7 @@ function ensureReadyLights(ufoGroup) {
   return lights;
 }
 
-function updateExistingUfoMesh(scene, now) {
+export function updateSneakleUfoRepairVisuals(scene, now = performance.now()) {
   const run = surfaceAdventure.run;
   const shouldRepair = run?.level?.kind === 'theft' && run.state === 'stranded' && run.ufoLaunchReady;
   const theftView = scene.getObjectByName?.('theftSurfaceAdventure');
@@ -86,7 +86,7 @@ function updateExistingUfoMesh(scene, now) {
       return;
     }
 
-    if (isLikelySmoke(part)) {
+    if (isSneakleUfoSmokePart(part)) {
       part.visible = false;
       return;
     }
@@ -98,7 +98,7 @@ function updateExistingUfoMesh(scene, now) {
       return;
     }
 
-    if (isLikelyBrokenPanel(part)) {
+    if (isSneakleBrokenPanelPart(part)) {
       part.visible = true;
       part.material.color.copy(REPAIRED_PANEL);
       part.scale.set(0.9, 1.8, 1.8);
@@ -121,7 +121,7 @@ function updateExistingUfoMesh(scene, now) {
   const ufoGroup = brokenUfoShell?.children?.[0];
   if (!ufoGroup) return;
 
-  const lights = ensureReadyLights(ufoGroup);
+  const lights = ensureSneakleUfoReadyLights(ufoGroup);
   lights.visible = shouldRepair;
   if (shouldRepair) {
     lights.children.forEach((light, index) => {
@@ -134,7 +134,7 @@ const originalRender = THREE.WebGLRenderer.prototype.render;
 if (!patched) {
   patched = true;
   THREE.WebGLRenderer.prototype.render = function renderWithSneakleRepairPayoff(scene, camera) {
-    updateExistingUfoMesh(scene, performance.now());
+    updateSneakleUfoRepairVisuals(scene, performance.now());
     return originalRender.call(this, scene, camera);
   };
 }
