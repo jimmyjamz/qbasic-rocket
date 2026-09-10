@@ -7,13 +7,23 @@ const loopStatusLabel = document.querySelector('#loopStatus');
 const helpLabel = document.querySelector('#helpText');
 
 function getSneakleMission(run) {
+  if (run.ufoLaunchReady) {
+    return {
+      title: 'UFO launch-ready',
+      objective: 'The Wobble Coil and Flux Capacitor are installed. The UFO hums like it can fly, but rocket recovery is still next.',
+      badge: 'UFO ready',
+      action: 'Launch pending',
+      help: 'UFO repaired. A later story will launch it and chase down the stolen rocket.'
+    };
+  }
+
   if (run.fluxCapacitorCollected) {
     return {
-      title: 'Flux Capacitor found',
-      objective: 'The weird helpful alien accepted the Cheetos and gave you Icky Sticky Slime plus the Flux Capacitor.',
-      badge: 'Flux found',
-      action: 'Repair pending',
-      help: 'Flux Capacitor found. The UFO still needs a later repair/install step before it can fly.'
+      title: 'Return to the UFO',
+      objective: 'You have the Icky Sticky Slime and Flux Capacitor. Bring the Flux Capacitor back to the broken UFO hatch.',
+      badge: 'Flux held',
+      action: 'Install flux',
+      help: 'Flux Capacitor found. Head left to the UFO hatch and install it.'
     };
   }
 
@@ -106,6 +116,47 @@ function renderMissionCard(mission) {
   });
 }
 
+function ensureUfoReadyPayoff() {
+  let payoff = document.querySelector('#sneakleUfoReadyPayoff');
+  if (payoff) return payoff;
+
+  payoff = document.createElement('div');
+  payoff.id = 'sneakleUfoReadyPayoff';
+  payoff.setAttribute('aria-live', 'polite');
+  payoff.textContent = '🛸 UFO READY · HUMMMMM!';
+  Object.assign(payoff.style, {
+    position: 'fixed',
+    left: '50%',
+    bottom: '116px',
+    transform: 'translateX(-50%)',
+    padding: '12px 18px',
+    borderRadius: '18px',
+    border: '3px solid #ffdd66',
+    background: 'linear-gradient(135deg, rgba(45, 23, 68, 0.94), rgba(28, 91, 112, 0.94))',
+    color: '#fff9d7',
+    fontFamily: 'system-ui, sans-serif',
+    fontWeight: '900',
+    letterSpacing: '0.08em',
+    textShadow: '0 0 12px rgba(255, 221, 102, 0.9)',
+    boxShadow: '0 0 28px rgba(125, 245, 255, 0.55), 0 0 52px rgba(255, 221, 102, 0.35)',
+    zIndex: '20',
+    pointerEvents: 'none',
+    display: 'none'
+  });
+  document.body.appendChild(payoff);
+  return payoff;
+}
+
+function renderUfoReadyPayoff(run) {
+  const payoff = ensureUfoReadyPayoff();
+  const show = run?.level?.kind === 'theft' && run.state === 'stranded' && run.ufoLaunchReady;
+  payoff.style.display = show ? 'block' : 'none';
+  if (show) {
+    const pulse = 1 + Math.sin(performance.now() * 0.009) * 0.035;
+    payoff.style.transform = `translateX(-50%) scale(${pulse.toFixed(3)})`;
+  }
+}
+
 function renderSneakleStatus() {
   const run = surfaceAdventure.run;
   if (run?.level?.kind === 'theft' && run.state === 'stranded') {
@@ -114,11 +165,15 @@ function renderSneakleStatus() {
     loopStatusLabel.textContent = run.objective;
     actionButton.textContent = mission.action;
     helpLabel.textContent = mission.help;
+    renderUfoReadyPayoff(run);
     // Mission tracker listens to the same labels and may render generic rescue copy.
     // Queue this after those mutation callbacks so Sneakle stays non-rescue in the UI.
     queueMicrotask(() => renderMissionCard(mission));
-  } else if (document.body.dataset.rocketTheftObjective) {
-    document.body.dataset.rocketTheftObjective = '';
+  } else {
+    renderUfoReadyPayoff(run);
+    if (document.body.dataset.rocketTheftObjective) {
+      document.body.dataset.rocketTheftObjective = '';
+    }
   }
 
   requestAnimationFrame(renderSneakleStatus);

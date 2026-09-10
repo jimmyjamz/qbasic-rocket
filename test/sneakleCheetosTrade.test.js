@@ -31,12 +31,23 @@ function completeWobbleCoilRepair() {
   return run;
 }
 
+export function completeCheetosTrade() {
+  const run = completeWobbleCoilRepair();
+  run.update(0.16, { x: THEFT_LEVEL.backpackX, y: 0 });
+  assert.equal(run.objective, 'TRADE CHEETOS');
+  run.update(0.16, { x: THEFT_LEVEL.tradeAlienX, y: 0 });
+  assert.equal(run.fluxCapacitorCollected, true);
+  assert.equal(run.objective, 'RETURN TO UFO');
+  return run;
+}
+
 test('Sneakle trade coordinates keep backpack and alien away from the UFO repair hatch', () => {
   assert.ok(THEFT_LEVEL.backpackX < THEFT_LEVEL.wobbleCoilX);
   assert.ok(THEFT_LEVEL.tradeAlienX > THEFT_LEVEL.wobbleCoilX);
   assert.ok(THEFT_LEVEL.tradeAlienX < THEFT_LEVEL.ufoApproachX);
   assert.ok(THEFT_LEVEL.backpackRadius > 0.5);
   assert.ok(THEFT_LEVEL.tradeAlienRadius > 0.8);
+  assert.ok(THEFT_LEVEL.fluxInstallRadius > 0.8);
 });
 
 test('Sneakle backpack becomes the next objective only after the Wobble Coil is installed', () => {
@@ -68,6 +79,23 @@ test('Sneakle weird alien trades Cheetos for Icky Sticky Slime and Flux Capacito
   assert.equal(run.hasCheetos, false);
   assert.equal(run.stickySlimeReceived, true);
   assert.equal(run.fluxCapacitorCollected, true);
-  assert.equal(run.objective, 'FLUX CAPACITOR FOUND');
+  assert.equal(run.fluxCapacitorInstalled, false);
+  assert.equal(run.ufoLaunchReady, false);
+  assert.equal(run.objective, 'RETURN TO UFO');
+  assert.equal(run.state, 'stranded');
+});
+
+test('Sneakle installs Flux Capacitor at UFO and becomes launch-ready', () => {
+  const run = completeCheetosTrade();
+
+  run.update(0.16, { x: THEFT_LEVEL.fluxInstallX - THEFT_LEVEL.fluxInstallRadius - 0.35, y: 0 });
+  assert.equal(run.fluxCapacitorInstalled, false);
+  assert.equal(run.ufoLaunchReady, false);
+  assert.equal(run.objective, 'RETURN TO UFO');
+
+  run.update(0.16, { x: THEFT_LEVEL.fluxInstallX, y: 0 });
+  assert.equal(run.fluxCapacitorInstalled, true);
+  assert.equal(run.ufoLaunchReady, true);
+  assert.equal(run.objective, 'UFO READY');
   assert.equal(run.state, 'stranded');
 });

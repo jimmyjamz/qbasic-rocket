@@ -54,6 +54,14 @@ test('surface view owns and updates the full Sneakle trade, including reset and 
       assert.equal(staged.fluxCapacitorCollected, stage === 'flux');
     }
 
+    assert.equal(getDevTestStartRequest(new URL('http://localhost/?testStage=repaired')).stage, 'repaired');
+    assert.equal(getDevTestStartRequest(new URL('http://localhost/?testStage=ufo-ready')).stage, 'ufoready');
+    surfaceAdventure.run = createSurfaceRun(THEFT_LEVEL);
+    const repaired = primeSneakleRunForStage('repaired');
+    assert.equal(repaired.fluxCapacitorCollected, true);
+    assert.equal(repaired.fluxCapacitorInstalled, true);
+    assert.equal(repaired.ufoLaunchReady, true);
+
     const fresh = createSurfaceRun(THEFT_LEVEL);
     view.update(fresh);
     for (const object of [backpack, alien, prize, backpackLabel, alienLabel, prizeLabel]) {

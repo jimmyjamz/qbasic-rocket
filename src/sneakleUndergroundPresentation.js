@@ -49,6 +49,92 @@ function makeSign(text, x, y, width = 2.2) {
   return sprite;
 }
 
+function createLaunchReadyUfoVisual() {
+  const ufo = new THREE.Group();
+  ufo.name = 'sneakleLaunchReadyUfo';
+  ufo.visible = false;
+
+  const hullMaterial = new THREE.MeshStandardMaterial({
+    color: 0xf6f4ff,
+    emissive: 0x7df5ff,
+    emissiveIntensity: 0.18,
+    roughness: 0.28,
+    metalness: 0.58
+  });
+  const undersideMaterial = new THREE.MeshStandardMaterial({
+    color: 0x4e4074,
+    emissive: 0x2c1a58,
+    emissiveIntensity: 0.18,
+    roughness: 0.38,
+    metalness: 0.25
+  });
+  const domeMaterial = new THREE.MeshStandardMaterial({
+    color: 0xfff066,
+    emissive: 0x7df5ff,
+    emissiveIntensity: 0.9,
+    roughness: 0.2,
+    metalness: 0.18
+  });
+  const readyMaterial = new THREE.MeshBasicMaterial({ color: 0x7df5ff, depthTest: false });
+  const patchMaterial = new THREE.MeshBasicMaterial({ color: 0x8affb3, depthTest: false });
+
+  const saucer = new THREE.Mesh(new THREE.CylinderGeometry(1.52, 1.86, 0.34, 40), hullMaterial);
+  saucer.name = 'sneakleLaunchReadySaucerHull';
+  saucer.position.y = 0.72;
+  saucer.scale.z = 0.62;
+
+  const underside = new THREE.Mesh(new THREE.CylinderGeometry(1.0, 1.32, 0.18, 36), undersideMaterial);
+  underside.name = 'sneakleLaunchReadySaucerUnderside';
+  underside.position.y = 0.48;
+  underside.scale.z = 0.58;
+
+  const dome = new THREE.Mesh(new THREE.SphereGeometry(0.74, 24, 12), domeMaterial);
+  dome.name = 'sneakleLaunchReadyDome';
+  dome.position.y = 1.02;
+  dome.scale.set(1, 0.48, 0.7);
+
+  const repairedPanel = new THREE.Mesh(new THREE.BoxGeometry(0.82, 0.16, 0.12), patchMaterial);
+  repairedPanel.name = 'sneakleLaunchReadyRepairedPatch';
+  repairedPanel.position.set(-0.45, 0.97, 0.56);
+
+  const core = new THREE.Mesh(new THREE.TorusGeometry(0.36, 0.055, 10, 32), readyMaterial);
+  core.name = 'sneakleLaunchReadyFluxCore';
+  core.rotation.x = Math.PI / 2;
+  core.position.set(0.36, 0.95, 0.58);
+
+  const lights = new THREE.Group();
+  lights.name = 'sneakleLaunchReadyLights';
+  [-1.0, -0.5, 0, 0.5, 1.0].forEach((x, index) => {
+    const light = new THREE.Mesh(new THREE.SphereGeometry(0.11, 12, 8), readyMaterial);
+    light.name = `sneakleLaunchReadyLight${index + 1}`;
+    light.position.set(x, 0.86, 0.62);
+    lights.add(light);
+  });
+
+  for (const x of [-1.05, 0.2, 1.0]) {
+    const foot = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.065, 0.7, 8), undersideMaterial);
+    foot.position.set(x, 0.05, x === 0.2 ? 0.42 : -0.22);
+    foot.rotation.z = x * 0.1;
+    ufo.add(foot);
+  }
+
+  const beam = new THREE.Mesh(
+    new THREE.ConeGeometry(0.82, 1.0, 32, 1, true),
+    new THREE.MeshBasicMaterial({ color: 0x7df5ff, transparent: true, opacity: 0.22, depthWrite: false })
+  );
+  beam.name = 'sneakleLaunchReadySoftBeam';
+  beam.position.set(0, 0.02, 0.02);
+  beam.rotation.x = Math.PI;
+
+  ufo.add(beam, underside, saucer, dome, repairedPanel, core, lights);
+  ufo.position.set(THEFT_LEVEL.ufoX, 0.02, 0.78);
+  ufo.userData.lights = lights;
+  ufo.userData.core = core;
+  ufo.userData.dome = dome;
+  ufo.userData.beam = beam;
+  return ufo;
+}
+
 function createUndergroundOverlay() {
   const group = new THREE.Group();
   group.name = 'sneakleUndergroundOverlay';
@@ -195,6 +281,9 @@ function createUndergroundOverlay() {
   installedCoil.visible = false;
   group.add(installedCoil);
 
+  const launchReadyUfo = createLaunchReadyUfoVisual();
+  group.add(launchReadyUfo);
+
   group.userData.hatch = hatch;
   group.userData.panel = panel;
   group.userData.panelHomeY = THEFT_LEVEL.hatchPanelY ?? 1.45;
@@ -210,6 +299,7 @@ function createUndergroundOverlay() {
   group.userData.coilSign = coilSign;
   group.userData.returnSign = returnSign;
   group.userData.installedCoil = installedCoil;
+  group.userData.launchReadyUfo = launchReadyUfo;
   return group;
 }
 
@@ -226,6 +316,15 @@ function hideOldUfoScenery(hidden) {
     const inUfoRoomZone = child.position.x >= hideStart && child.position.x <= hideEnd;
     const hideableOldScenery = child.type === 'Group' || child.type === 'Sprite';
     if (inUfoRoomZone && hideableOldScenery) child.visible = !hidden;
+  });
+}
+
+function hideInstalledTradePrize(hidden) {
+  if (!theftSurfaceGroup) return;
+  theftSurfaceGroup.traverse((child) => {
+    if (child.name === 'sneakleVisibleTradePrize' || child.name === 'sneakleTradePrizeLabel') {
+      child.visible = !hidden;
+    }
   });
 }
 
@@ -246,6 +345,23 @@ function extendSneakleCamera(camera, run) {
   camera.lookAt(camera.position.x, desiredY - 0.75, 0);
 }
 
+function renderLaunchReadyUfo(launchReadyUfo, visible, now) {
+  if (!launchReadyUfo) return;
+  launchReadyUfo.visible = visible;
+  if (!visible) return;
+
+  launchReadyUfo.rotation.z = Math.sin(now * 0.0025) * 0.012;
+  const hover = Math.sin(now * 0.0038) * 0.035;
+  launchReadyUfo.position.y = 0.08 + hover;
+
+  launchReadyUfo.userData.core.rotation.y += 0.11;
+  launchReadyUfo.userData.dome.scale.y = 0.48 + Math.sin(now * 0.006) * 0.025;
+  launchReadyUfo.userData.beam.scale.setScalar(1 + Math.sin(now * 0.005) * 0.04);
+  launchReadyUfo.userData.lights.children.forEach((light, index) => {
+    light.scale.setScalar(1.05 + Math.sin(now * 0.009 + index) * 0.22);
+  });
+}
+
 function renderUndergroundOverlay(camera, now = performance.now()) {
   const run = surfaceAdventure.active ? surfaceAdventure.run : null;
   const show = run?.level?.kind === 'theft' && run.state === 'stranded' && run.ufoDiscovered;
@@ -253,6 +369,7 @@ function renderUndergroundOverlay(camera, now = performance.now()) {
 
   overlay.visible = show;
   hideOldUfoScenery(show);
+  hideInstalledTradePrize(show && Boolean(run?.ufoLaunchReady));
   extendSneakleCamera(camera, run);
 
   const panel = overlay.userData.panel;
@@ -274,6 +391,8 @@ function renderUndergroundOverlay(camera, now = performance.now()) {
   const coilSign = overlay.userData.coilSign;
   const returnSign = overlay.userData.returnSign;
   const installedCoil = overlay.userData.installedCoil;
+  const launchReadyUfo = overlay.userData.launchReadyUfo;
+  const launchReady = show && Boolean(run?.ufoLaunchReady);
   const pickupVisible = show && run?.ufoHatchInspected && !run?.wobbleCoilCollected;
   const returnVisible = show && run?.wobbleCoilCollected && !run?.wobbleCoilInstalled;
   const installedVisible = show && Boolean(run?.wobbleCoilInstalled);
@@ -285,7 +404,8 @@ function renderUndergroundOverlay(camera, now = performance.now()) {
   if (coilPickup) coilPickup.visible = pickupVisible;
   if (coilSign) coilSign.visible = pickupVisible;
   if (returnSign) returnSign.visible = returnVisible;
-  if (installedCoil) installedCoil.visible = returnVisible || installedVisible;
+  if (installedCoil) installedCoil.visible = (returnVisible || installedVisible) && !launchReady;
+  renderLaunchReadyUfo(launchReadyUfo, launchReady, now);
 
   if (pickupVisible && coil) {
     coil.rotation.y += 0.1;
